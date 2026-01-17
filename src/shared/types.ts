@@ -27,6 +27,7 @@ export interface Player {
     hands: Hand[];
     balance: number;
     player_idx: number;
+    active : boolean
 }
 
 export interface GameState {
