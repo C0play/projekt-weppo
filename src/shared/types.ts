@@ -3,13 +3,14 @@ export type Card = {
     suit : string
     point : number
 }
+export type Hand = 
+{
+    bet : number
+    cards : Card[]
+    points : number
+}
 export type Dealer = {
     cards : Card[]
     points : number
 
-}
-export type Player = {
-    nick : string
-    cards : Card[]
-    points : number
 }
