@@ -1,16 +1,38 @@
-export type Card = {
-    rank : string
-    suit : string
-    point : number
+export interface Card {
+    rank: string;
+    suit: string;
+    point: number;
 }
-export type Hand = 
-{
-    bet : number
-    cards : Card[]
-    points : number
-}
-export type Dealer = {
-    cards : Card[]
-    points : number
 
+export interface Hand {
+    bet: number;
+    cards: Card[];
+    points: number;
+}
+
+export interface Dealer {
+    cards: Card[];
+    points: number;
+}
+
+export interface Turn {
+    player_idx: number;
+    hand_idx: number;
+    timestamp: number;
+}
+
+export interface Player {
+    nick: string;
+    hands: Hand[];
+    balance: number;
+    player_idx: number;
+}
+
+export interface GameState {
+    uuid: string;
+    number_of_players: number;
+    max_players: number;
+    turn: Turn;
+    players: Player[];
+    dealer: Dealer;
 }
