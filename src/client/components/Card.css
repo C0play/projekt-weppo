@@ -1,0 +1,28 @@
+:root {
+  --card-width: 160px;
+}
+
+.card {
+  width: var(--card-width);
+  height: calc(var(--card-width) * 1.5);
+  border-radius: calc(var(--card-width) * 0.1);
+  box-shadow: 0 calc(var(--card-width) * 0.05) calc(var(--card-width) * 0.1) rgba(0, 0, 0, 1);
+  margin: 0.5rem;
+  overflow: hidden;
+}
+
+.card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 0px;
+}
+
+.card.back {
+  background-color: #2e3b4e;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 2rem;
+}

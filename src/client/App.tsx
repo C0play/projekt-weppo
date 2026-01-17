@@ -1,35 +1,43 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import "./App.css";
+import React from "react";
+import Card from "./components/Card";
+import { Card as CardType } from "../shared/types";
+
+const playerCards: CardType[] = [
+  { suit: "H", rank: "A", value: 11 },
+  { suit: "S", rank: "K", value: 10 },
+];
+
+const dealerCards: CardType[] = [
+  { suit: "D", rank: "Q", value: 10 },
+  { suit: "C", rank: "2", value: 2 },
+];
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <div className="app">
+      <h1>Multiplayer Blackjack</h1>
+      <div className="game-table">
+        <div className="dealer-section">
+          <h2>Dealer</h2>
+          <div className="cards">
+            {dealerCards.map((card, index) => (
+              <Card key={index} card={card} />
+            ))}
+          </div>
+        </div>
+        <div className="player-section">
+          <h2>Player</h2>
+          <div className="cards">
+            {playerCards.map((card, index) => (
+              <Card key={index} card={card} />
+            ))}
+          </div>
+        </div>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  );
 }
 
-export default App
+export default App;
