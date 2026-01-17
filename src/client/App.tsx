@@ -4,7 +4,54 @@ import "./App.css";
 import Card from "./components/Card";
 import { GameState as SharedGameState } from "../shared/types";
 
-const socket: Socket = io("http://localhost:3000", { autoConnect: false });
+const socket: Socket = io("http://192.168.0.200:3000", { autoConnect: false });
+
+// MOCK DATA FOR TESTING WITHOUT SERVER
+const mockGameState: SharedGameState = {
+  uuid: "test-game-1234",
+  number_of_players: 2,
+  max_players: 5,
+  turn: { player_idx: 0, hand_idx: 0, timestamp: Date.now(), validMoves: ["hit", "stand"] },
+  dealer: {
+    cards: [
+      { rank: "ace", suit: "spades", point: 11 },
+      { rank: "king", suit: "hearts", point: 10 },
+    ],
+    points: 21,
+  },
+  players: [
+    {
+      nick: "TestPlayer",
+      balance: 1000,
+      player_idx: 0,
+      hands: [
+        {
+          bet: 50,
+          points: 13,
+          cards: [
+            { rank: "10", suit: "clubs", point: 10 },
+            { rank: "3", suit: "diamonds", point: 3 },
+          ],
+        },
+      ],
+    },
+    {
+      nick: "Bot1",
+      balance: 800,
+      player_idx: 1,
+      hands: [
+        {
+          bet: 100,
+          points: 19,
+          cards: [
+            { rank: "king", suit: "diamonds", point: 10 },
+            { rank: "9", suit: "spades", point: 9 },
+          ],
+        },
+      ],
+    },
+  ],
+};
 
 function App() {
   const [view, setView] = useState<"login" | "lobby" | "game">("login");
@@ -12,6 +59,14 @@ function App() {
   const [gameIds, setGameIds] = useState<string[]>([]);
   const [gameState, setGameState] = useState<SharedGameState | null>(null);
   const [nickInput, setNickInput] = useState("");
+
+  /*
+  const runTestMode = () => {
+    setNick("TestPlayer");
+    setGameState(mockGameState);
+    setView("game");
+  };
+  */
 
   useEffect(() => {
     socket.on("connect", () => console.log("Connected"));
@@ -65,6 +120,9 @@ function App() {
     socket.emit("join_game", nick, gameId);
   };
 
+  const isMyTurn = gameState && gameState.players[gameState.turn.player_idx]?.nick === nick;
+  const validMoves = gameState?.turn.validMoves?.map((m) => m.toLowerCase()) || [];
+
   if (view === "login") {
     return (
       <div className="app">
@@ -78,6 +136,9 @@ function App() {
             style={{ padding: "10px", fontSize: "16px" }}
           />
           <button onClick={handleLogin}>Log In</button>
+          {/* <button onClick={runTestMode} style={{ marginTop: "10px", backgroundColor: "#555" }}>
+            Test Mode (No Server)
+          </button> */}
         </div>
       </div>
     );
@@ -97,9 +158,9 @@ function App() {
           {gameIds.length === 0 ? (
             <p>No games available</p>
           ) : (
-            gameIds.map((id) => (
+            gameIds.map((id, index) => (
               <div
-                key={id}
+                key={`${id}-${index}`}
                 style={{
                   margin: "10px",
                   padding: "10px",
@@ -125,6 +186,81 @@ function App() {
       <h1>Room: {gameState?.uuid.substring(0, 8)}...</h1>
       <button onClick={() => setView("lobby")}>Back to Lobby</button>
 
+      {/* Game Controls */}
+      <div
+        className="controls"
+        style={{
+          position: "fixed",
+          bottom: "20px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          backgroundColor: "rgba(0,0,0,0.8)",
+          padding: "20px",
+          borderRadius: "10px",
+          zIndex: 1000,
+          textAlign: "center",
+        }}
+      >
+        <h3 style={{ margin: "0 0 10px 0", color: isMyTurn ? "#4CAF50" : "#FFF" }}>
+          {isMyTurn
+            ? "It's your turn!"
+            : `Current turn: ${gameState?.players[gameState?.turn.player_idx]?.nick || "Unknown"}`}
+        </h3>
+        {isMyTurn && (
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              onClick={() => validMoves.includes("hit") && socket.emit("hit")}
+              style={{
+                padding: "10px 20px",
+                fontSize: "1.2em",
+                backgroundColor: "#2196F3",
+                opacity: validMoves.includes("hit") ? 1 : 0.5,
+                cursor: validMoves.includes("hit") ? "pointer" : "default",
+              }}
+            >
+              HIT
+            </button>
+            <button
+              onClick={() => validMoves.includes("stand") && socket.emit("stand")}
+              style={{
+                padding: "10px 20px",
+                fontSize: "1.2em",
+                backgroundColor: "#f44336",
+                opacity: validMoves.includes("stand") ? 1 : 0.5,
+                cursor: validMoves.includes("stand") ? "pointer" : "default",
+              }}
+            >
+              STAND
+            </button>
+            <button
+              onClick={() => validMoves.includes("double") && socket.emit("double")}
+              style={{
+                padding: "10px 20px",
+                fontSize: "1.2em",
+                backgroundColor: "#FFC107",
+                color: "black",
+                opacity: validMoves.includes("double") ? 1 : 0.5,
+                cursor: validMoves.includes("double") ? "pointer" : "default",
+              }}
+            >
+              DOUBLE
+            </button>
+            <button
+              onClick={() => validMoves.includes("split") && socket.emit("split")}
+              style={{
+                padding: "10px 20px",
+                fontSize: "1.2em",
+                backgroundColor: "#9C27B0",
+                opacity: validMoves.includes("split") ? 1 : 0.5,
+                cursor: validMoves.includes("split") ? "pointer" : "default",
+              }}
+            >
+              SPLIT
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="game-table">
         <div className="dealer-section">
           <h2>Dealer (Points: {gameState?.dealer.points})</h2>
@@ -139,8 +275,8 @@ function App() {
           className="players-container"
           style={{ display: "flex", gap: "20px", flexWrap: "wrap", justifyContent: "center" }}
         >
-          {gameState?.players.map((player) => (
-            <div key={player.nick} className="player-section">
+          {gameState?.players.map((player, index) => (
+            <div key={`${player.nick}-${index}`} className="player-section">
               <h2>
                 {player.nick} {player.nick === nick ? "(You)" : ""} (Balance: {player.balance})
               </h2>
