@@ -12,13 +12,18 @@ const __dirname = dirname(__filename);
 
 const app = express();
 const server = createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: [ "GET", "POST" ]
+  }
+});
 
 let nicks = new Set<string>();
-let games = new Map<string, Game>();
-let rooms = new Map<string, string>(); // nick -> room
+let games = new Map<string, Game>(); // game_id -> Game
+let rooms = new Map<string, string>(); // nick -> game_id/room_name
 
-app.get("/", (req: Request, res: Response) => {
+app.get("/", (_req: Request, res: Response) => {
   res.sendFile(join(__dirname, "../../client", "index.html"));
 });
 
@@ -28,15 +33,18 @@ io.on("connection", (socket: Socket) => {
     console.log(socket.id + " new_nick: " + nick);
     if (nicks.has(nick)) {
       socket.emit("nick_status", { available: false, nick });
+      console.log("sending ack false");
     } else {
       nicks.add(nick);
       socket.emit("nick_status", { available: true, nick });
+      console.log("sending ack true");
     }
   });
 
   socket.on("disconnect", (nick: string) => {
     nicks.delete(nick);
     rooms.delete(nick);
+    // delete player from games
   });
 
   // Get games
@@ -69,10 +77,28 @@ io.on("connection", (socket: Socket) => {
       socket.emit("error", { msg: "no game with " + game_id + " found" });
       return;
     }
+    // validate uniquee nick
+
+    console.debug("adding " + nick);
     game.add_player(new Player(nick));
     rooms.set(nick, game.uuid);
 
     socket.join(game.uuid);
+    io.to(game.uuid).emit("game", game);
+
+  });
+
+  // Leave game
+  socket.on("leave_game", (nick: string, game_id: string) => {
+    const game = games.get(game_id);
+    if (game === undefined) {
+      socket.emit("error", { msg: "no game with " + game_id + " found" });
+      return;
+    }
+    // game.delete_player(nick)
+
+    rooms.delete(nick);
+
     io.to(game.uuid).emit("game", game);
   });
 
@@ -80,6 +106,6 @@ io.on("connection", (socket: Socket) => {
 
 });
 
-server.listen(3000, "localhost", () => {
+server.listen(3000, "0.0.0.0", () => {
   console.log("server running at ", server.address());
 });
