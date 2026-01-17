@@ -45,12 +45,14 @@ export class Turn implements GameTypes.Turn {
     public player_idx : number;
     public hand_idx : number;
     public timestamp : number;
+    public validMoves : string[]
 
     constructor()
     {
         this.player_idx = 0;
         this.hand_idx = 0;
         this.timestamp = d.getTime();
+        this.validMoves=[];
     }
 }
 export class Player implements GameTypes.Player {
@@ -110,6 +112,7 @@ export class Game {
                 this.players[this.turn.player_idx].hands[this.turn.hand_idx].points+=card.point
             }
         }
+        this.turn.validMoves=this.valid_moves();
 
     }
 
@@ -153,6 +156,7 @@ export class Game {
         {
             this.turn.hand_idx++;
         }
+        this.turn.validMoves=this.valid_moves()
     }
     public stand()
     {
@@ -164,6 +168,80 @@ export class Game {
         this.draw_card();
         this.next_turn();
     }
+    private valid_moves() : string[]
+    {
+        let validm = ["HIT","STAND","DOUBLE"];
+        if(this.players[this.turn.player_idx].hands[this.turn.player_idx].cards.length > 2)
+        {
+            return validm
+        }
+        if(this.players[this.turn.player_idx].hands[this.turn.player_idx].cards[0].rank == this.players[this.turn.player_idx].hands[this.turn.player_idx].cards[1].rank)
+        {
+            validm.push("SPLIT");
+        }
+        return validm;
+    }
+    public split()
+    {
+        let card = this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
+        this.players[this.turn.player_idx].hands[this.turn.hand_idx].points/=2;
+        if(card)
+        {
+        let newHand : GameTypes.Hand = {
+            bet : this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet,
+            cards : [card],
+            points : card.point
+
+        };
+        this.players[this.turn.player_idx].hands.push(newHand);
+        }
+
+    }
+    private is_bust() : boolean
+    {
+        if(this.players[this.turn.player_idx].hands[this.turn.hand_idx].points > 21)
+        {
+            return true;
+        }
+        return false;
+    }
+    private is_blackjack() : boolean
+    {
+        if(this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.length==2 && 
+            this.players[this.turn.player_idx].hands[this.turn.hand_idx].points==21
+        )
+        {
+            return true;
+        }
+        return false;
+    }
+    public hit()
+    {
+        this.draw_card()
+        if(this.is_bust())
+        {
+            this.next_turn;
+        }
+    }
+    private win()
+    {
+        this.players[this.turn.player_idx].balance += 2*this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet;
+    }
+    private win_bj()
+    {
+        this.players[this.turn.player_idx].balance += Math.round(2.5*this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet);
+    }
+    private push()
+    {
+        this.players[this.turn.player_idx].balance += this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet;
+    }
+    /*private update_balances()
+    {
+        for(let i=0; i<this.number_of_players;i++)
+        {
+            for(let j=0;j<thi)
+        }
+    }*/
     public play_dealer()
     {
 
