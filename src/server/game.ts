@@ -235,13 +235,13 @@ export class Game {
     {
         this.players[this.turn.player_idx].balance += this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet;
     }
-    private update_balances()
+    /*private update_balances()
     {
         for(let i=0; i<this.number_of_players;i++)
         {
-            for(let j=0)
+            for(let j=0;j<thi)
         }
-    }
+    }*/
     public play_dealer()
     {
 
