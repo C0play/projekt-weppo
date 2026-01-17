@@ -1,4 +1,4 @@
-import * as GameTypes from "../common/types";
+import * as GameTypes from "../shared/types";
 
 function createDecks(numberOfDecks: number = 4): GameTypes.Card[] {
     const deck: GameTypes.Card[] = [];
@@ -44,6 +44,7 @@ function shuffle(deck : GameTypes.Card[]): GameTypes.Card[]
 
     return deck;
 }
+
 export class Game {
     private deck : GameTypes.Card[]
     private players : GameTypes.Player[]
@@ -55,6 +56,7 @@ export class Game {
         this.players = [];
         this.dealer = {cards: [],points: 0}
     }
+    
     public add_Player(Player: GameTypes.Player): any
     {
         this.players.push(Player)
