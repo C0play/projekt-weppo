@@ -55,10 +55,10 @@ io.on("connection", (socket: Socket) => {
     let new_game: Game = new Game();
     new_game.add_player(new Player(nick));
 
-    games.set(new_game.uid, new_game);
-    rooms.set(nick, new_game.uid);
+    games.set(new_game.uuid, new_game);
+    rooms.set(nick, new_game.uuid);
 
-    socket.join(new_game.uid);
+    socket.join(new_game.uuid);
     socket.emit("game_added", new_game);
   });
 
@@ -70,15 +70,16 @@ io.on("connection", (socket: Socket) => {
       return;
     }
     game.add_player(new Player(nick));
-    rooms.set(nick, game.uid);
+    rooms.set(nick, game.uuid);
 
-    socket.join(game.uid);
-    io.to(game.uid).emit("game", game);
+    socket.join(game.uuid);
+    io.to(game.uuid).emit("game", game);
   });
 
-  //
+  // 
+
 });
 
-server.listen(3000, () => {
-  console.log("server running at http://192.168.0.200:3000");
+server.listen(3000, "localhost", () => {
+  console.log("server running at ", server.address());
 });
