@@ -19,6 +19,7 @@ export interface Turn {
     player_idx: number;
     hand_idx: number;
     timestamp: number;
+    validMoves : string[];
 }
 
 export interface Player {
