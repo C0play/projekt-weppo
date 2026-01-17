@@ -41,7 +41,7 @@ function shuffle(deck: GameTypes.Card[]): GameTypes.Card[] {
 
     return deck;
 }
-export class Turn {
+export class Turn implements GameTypes.Turn {
     public player_idx : number;
     public hand_idx : number;
     public timestamp : number;
@@ -53,7 +53,7 @@ export class Turn {
         this.timestamp = d.getTime();
     }
 }
-export class Player {
+export class Player implements GameTypes.Player {
     public nick: string
     public hands: GameTypes.Hand[]
     public balance: number
