@@ -6,7 +6,7 @@ import { GameState as SharedGameState } from "../shared/types";
 
 const socket: Socket = io("http://" + "localhost" + ":" + 3000, { autoConnect: false });
 
-// MOCK DATA FOR TESTING WITHOUT SERVER
+/* // MOCK DATA FOR TESTING WITHOUT SERVER
 const mockGameState: SharedGameState = {
   uuid: "test-game-1234",
   number_of_players: 2,
@@ -52,7 +52,7 @@ const mockGameState: SharedGameState = {
     },
   ],
 };
-
+ */
 function App() {
   const [view, setView] = useState<"login" | "lobby" | "game">("login");
   const [nick, setNick] = useState("");
