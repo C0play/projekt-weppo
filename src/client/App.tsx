@@ -60,11 +60,11 @@ function App() {
   const [gameState, setGameState] = useState<SharedGameState | null>(null);
   const [nickInput, setNickInput] = useState("");
 
-  const runTestMode = () => {
+  /* const runTestMode = () => {
     setNick("TestPlayer");
     setGameState(mockGameState);
     setView("game");
-  };
+  }; */
 
   useEffect(() => {
     socket.on("connect", () => console.log("Connected"));
