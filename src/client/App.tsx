@@ -6,12 +6,12 @@ import { GameState as SharedGameState } from "../shared/types";
 
 const socket: Socket = io("http://" + "localhost" + ":" + 3000, { autoConnect: false });
 
-/* // MOCK DATA FOR TESTING WITHOUT SERVER
+// MOCK DATA FOR TESTING WITHOUT SERVER
 const mockGameState: SharedGameState = {
   uuid: "test-game-1234",
-  number_of_players: 2,
-  max_players: 5,
-  turn: { player_idx: 0, hand_idx: 0, timestamp: Date.now(), validMoves: ["hit", "stand"] },
+  number_of_players: 4,
+  max_players: 4,
+  turn: { player_idx: 0, hand_idx: 0, timestamp: Date.now(), validMoves: ["hit", "stand", "double"] },
   dealer: {
     cards: [
       { rank: "ace", suit: "spades", point: 11 },
@@ -24,6 +24,7 @@ const mockGameState: SharedGameState = {
       nick: "TestPlayer",
       balance: 1000,
       player_idx: 0,
+      active: true,
       hands: [
         {
           bet: 50,
@@ -39,6 +40,39 @@ const mockGameState: SharedGameState = {
       nick: "Bot1",
       balance: 800,
       player_idx: 1,
+      active: true,
+      hands: [
+        {
+          bet: 100,
+          points: 19,
+          cards: [
+            { rank: "king", suit: "diamonds", point: 10 },
+            { rank: "9", suit: "spades", point: 9 },
+          ],
+        },
+      ],
+    },
+    {
+      nick: "Bot2",
+      balance: 800,
+      player_idx: 2,
+      active: true,
+      hands: [
+        {
+          bet: 100,
+          points: 19,
+          cards: [
+            { rank: "king", suit: "diamonds", point: 10 },
+            { rank: "9", suit: "spades", point: 9 },
+          ],
+        },
+      ],
+    },
+    {
+      nick: "Bot4",
+      balance: 800,
+      player_idx: 3,
+      active: true,
       hands: [
         {
           bet: 100,
@@ -52,7 +86,7 @@ const mockGameState: SharedGameState = {
     },
   ],
 };
- */
+
 function App() {
   const [view, setView] = useState<"login" | "lobby" | "game">("login");
   const [nick, setNick] = useState("");
@@ -60,11 +94,11 @@ function App() {
   const [gameState, setGameState] = useState<SharedGameState | null>(null);
   const [nickInput, setNickInput] = useState("");
 
-  /* const runTestMode = () => {
+  const runTestMode = () => {
     setNick("TestPlayer");
     setGameState(mockGameState);
     setView("game");
-  }; */
+  };
 
   useEffect(() => {
     socket.on("connect", () => console.log("Connected"));
@@ -121,6 +155,24 @@ function App() {
   const isMyTurn = gameState && gameState.players[gameState.turn.player_idx]?.nick === nick;
   const validMoves = gameState?.turn.validMoves?.map((m) => m.toLowerCase()) || [];
 
+  // Helper to position players in an arc
+  const getPlayerStyle = (index: number, total: number) => {
+    // Basic arc calculation
+    // We want the center players to be lower (closer to bottom edge)
+    // and side players to be higher (closer to dealer)
+    const centerIndex = (total - 1) / 2;
+    const distanceFromCenter = Math.abs(index - centerIndex);
+
+    // Parabolic arch: y = x^2
+    const yOffset = -(Math.pow(distanceFromCenter, 2) * 20); // Move Up as we go out
+    // No rotation, parallel to screen as requested
+
+    return {
+      transform: `translateY(${yOffset}px)`,
+      zIndex: 10 - distanceFromCenter, // Center on top? Or sides? Usually doesn't matter much.
+    };
+  };
+
   if (view === "login") {
     return (
       <div className="app">
@@ -134,9 +186,9 @@ function App() {
             className="login-input"
           />
           <button onClick={handleLogin}>Log In</button>
-          {/* <button onClick={runTestMode} style={{ marginTop: "10px", backgroundColor: "#555" }}>
+          <button onClick={runTestMode} style={{ marginTop: "10px", backgroundColor: "#555" }}>
             Test Mode (No Server)
-          </button> */}
+          </button>
         </div>
       </div>
     );
@@ -170,9 +222,6 @@ function App() {
 
   return (
     <div className="app">
-      <h1>Room: {gameState?.uuid.substring(0, 8)}...</h1>
-      <button onClick={() => setView("lobby")}>Back to Lobby</button>
-
       {/* Game Controls */}
       <div className="game-controls">
         <h3 className={isMyTurn ? "my-turn" : ""}>
@@ -211,6 +260,11 @@ function App() {
       </div>
 
       <div className="game-table">
+        <button className="exit-btn" onClick={() => setView("lobby")}>
+          EXIT ROOM
+        </button>
+        <div className="room-info">Room: {gameState?.uuid.substring(0, 8)}...</div>
+
         <div className="dealer-section">
           <h2>Dealer (Points: {gameState?.dealer.points})</h2>
           <div className="cards">
@@ -222,9 +276,13 @@ function App() {
 
         <div className="players-wrapper">
           {gameState?.players.map((player, index) => (
-            <div key={`${player.nick}-${index}`} className="player-section">
+            <div
+              key={`${player.nick}-${index}`}
+              className="player-section"
+              style={getPlayerStyle(index, gameState.players.length)}
+            >
               <h2>
-                {player.nick} {player.nick === nick ? "(You)" : ""} (Balance: {player.balance})
+                {player.nick} {player.nick === nick ? "(You)" : ""}
               </h2>
               {player.hands.map((hand, hIndex) => (
                 <div key={hIndex} className="hand-section">
