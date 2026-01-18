@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import "./App.css";
 import Card from "./components/Card";
-import { GameState as SharedGameState } from "../shared/types";
+import { GameState as SharedGameState, PlayerState, GamePhase } from "../shared/types";
 
 const socket: Socket = io("http://" + "localhost" + ":" + 3000, { autoConnect: false });
 
@@ -11,6 +11,7 @@ const mockGameState: SharedGameState = {
   uuid: "test-game-1234",
   number_of_players: 4,
   max_players: 4,
+  game_phase: GamePhase.PLAYING,
   turn: { player_idx: 0, hand_idx: 0, timestamp: Date.now(), validMoves: ["hit", "stand", "double"] },
   dealer: {
     cards: [
@@ -18,17 +19,19 @@ const mockGameState: SharedGameState = {
       { rank: "king", suit: "hearts", point: 10 },
     ],
     points: 21,
+    number_of_full_aces: 1,
   },
   players: [
     {
       nick: "TestPlayer",
       balance: 1000,
       player_idx: 0,
-      active: true,
+      player_state: PlayerState.ACTIVE,
       hands: [
         {
           bet: 50,
           points: 13,
+          number_of_full_aces: 0,
           cards: [
             { rank: "10", suit: "clubs", point: 10 },
             { rank: "3", suit: "diamonds", point: 3 },
@@ -40,11 +43,12 @@ const mockGameState: SharedGameState = {
       nick: "Bot1",
       balance: 800,
       player_idx: 1,
-      active: true,
+      player_state: PlayerState.ACTIVE,
       hands: [
         {
           bet: 100,
           points: 19,
+          number_of_full_aces: 0,
           cards: [
             { rank: "king", suit: "diamonds", point: 10 },
             { rank: "9", suit: "spades", point: 9 },
@@ -56,11 +60,12 @@ const mockGameState: SharedGameState = {
       nick: "Bot2",
       balance: 800,
       player_idx: 2,
-      active: true,
+      player_state: PlayerState.ACTIVE,
       hands: [
         {
           bet: 100,
           points: 19,
+          number_of_full_aces: 0,
           cards: [
             { rank: "king", suit: "diamonds", point: 10 },
             { rank: "9", suit: "spades", point: 9 },
@@ -72,11 +77,12 @@ const mockGameState: SharedGameState = {
       nick: "Bot4",
       balance: 800,
       player_idx: 3,
-      active: true,
+      player_state: PlayerState.ACTIVE,
       hands: [
         {
           bet: 100,
           points: 19,
+          number_of_full_aces: 0,
           cards: [
             { rank: "king", suit: "diamonds", point: 10 },
             { rank: "9", suit: "spades", point: 9 },
@@ -154,6 +160,9 @@ function App() {
 
   const isMyTurn = gameState && gameState.players[gameState.turn.player_idx]?.nick === nick;
   const validMoves = gameState?.turn.validMoves?.map((m) => m.toLowerCase()) || [];
+
+  const currentPlayer = gameState?.players.find((p) => p.nick === nick);
+  const currentBalance = currentPlayer?.balance || 0;
 
   // Helper to position players in an arc
   const getPlayerStyle = (index: number, total: number) => {
@@ -263,7 +272,12 @@ function App() {
         <button className="exit-btn" onClick={() => setView("lobby")}>
           EXIT ROOM
         </button>
-        <div className="room-info">Room: {gameState?.uuid.substring(0, 8)}...</div>
+        <div className="room-info">
+          <div>Room: {gameState?.uuid.substring(0, 8)}...</div>
+          <div className="balance-info">
+            Balance: <span className="money">${currentBalance}</span>
+          </div>
+        </div>
 
         <div className="dealer-section">
           <h2>Dealer (Points: {gameState?.dealer.points})</h2>
