@@ -8,11 +8,13 @@ export interface Hand {
     bet: number;
     cards: Card[];
     points: number;
+    number_of_full_aces : number;
 }
 
 export interface Dealer {
     cards: Card[];
     points: number;
+    number_of_full_aces : number;
 }
 
 export interface Turn {
