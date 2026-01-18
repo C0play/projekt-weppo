@@ -31,7 +31,7 @@ export interface Player {
     player_idx: number;
     active : boolean
 }
-
+export enum GamePhase {"BETTING","PLAYING"}
 export interface GameState {
     uuid: string;
     number_of_players: number;
@@ -39,4 +39,5 @@ export interface GameState {
     turn: Turn;
     players: Player[];
     dealer: Dealer;
+    game_phase: GamePhase
 }

@@ -35,7 +35,7 @@ function createDecks(numberOfDecks: number = 4): GameTypes.Card[] {
 
 function shuffle(deck: GameTypes.Card[]): GameTypes.Card[] {
     deck = deck.sort(func)
-    function func(a: any, b: any): number {
+    function func(_a: any, _b: any): number {
         return 0.5 - Math.random();
     }
 
@@ -80,6 +80,7 @@ export class Game {
     public number_of_players : number
     public max_players = 5;
     public turn = new Turn()
+    public game_phase : GameTypes.GamePhase
 
     constructor()
     {
@@ -88,6 +89,7 @@ export class Game {
         this.dealer = { cards: [], points: 0, number_of_full_aces : 0 }
         this.number_of_players = 0
         this.uuid = globalThis.crypto.randomUUID()
+        this.game_phase = GameTypes.GamePhase.BETTING
     }
 
     public add_player(player : Player): void
@@ -384,6 +386,45 @@ export class Game {
             {
                 this.delete_player(i);
             }
+        }
+    }
+    public new_game()
+    {
+        this.deck = shuffle(createDecks(4))
+        for(let i =0;i<this.players.length;i++)
+        {
+            for(let j=0;j<this.players[i].hands.length;j++)
+            {   if(j===0)
+                {
+                this.players[i].hands[j].cards=[];
+                this.players[i].hands[j].points=0;
+                this.players[i].hands[j].number_of_full_aces=0;
+                this.players[i].hands[j].bet = 0;
+                }
+                else
+                {
+                    this.players[i].hands.splice(j,this.players[i].hands.length-2);
+                }
+            }
+
+        }
+        this.dealer.cards=[];
+        this.dealer.points=0;
+        this.dealer.number_of_full_aces=0;
+        this.turn.hand_idx=0;
+        this.turn.player_idx=0;
+    }
+    public change_game_phase()
+    {
+        if(this.game_phase === GameTypes.GamePhase.BETTING)
+        {
+            this.game_phase= GameTypes.GamePhase.PLAYING;
+            this.deal_cards();
+        }
+        if(this.game_phase === GameTypes.GamePhase.PLAYING)
+        {
+            this.game_phase=GameTypes.GamePhase.BETTING;
+            this.new_game();
         }
     }
 }
