@@ -23,13 +23,13 @@ export interface Turn {
     timestamp: number;
     validMoves : string[];
 }
-
+export enum PlayerState {"ACTIVE","INACTIVE","SPECTATING"}
 export interface Player {
     nick: string;
     hands: Hand[];
     balance: number;
     player_idx: number;
-    active : boolean
+    player_state : PlayerState
 }
 export enum GamePhase {"BETTING","PLAYING"}
 export interface GameState {

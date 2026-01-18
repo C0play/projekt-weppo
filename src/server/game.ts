@@ -60,13 +60,13 @@ export class Player implements GameTypes.Player {
     public hands: GameTypes.Hand[]
     public balance: number
     public player_idx: number
-    public active : boolean
+    public player_state : GameTypes.PlayerState;
     constructor(nick: string) {
         this.nick = nick
         this.hands = [{cards : [],bet : 0,number_of_full_aces:0,points:0}]
         this.balance = 1000
         this.player_idx = 0
-        this.active = true
+        this.player_state = GameTypes.PlayerState.INACTIVE
     }
 }
 
@@ -78,7 +78,7 @@ export class Game {
 
     public uuid: string
     public number_of_players : number
-    public max_players = 5;
+    public max_players = 4;
     public turn = new Turn()
     public game_phase : GameTypes.GamePhase
 
@@ -94,6 +94,14 @@ export class Game {
 
     public add_player(player : Player): void
     {
+        if(this.game_phase === GameTypes.GamePhase.BETTING)
+        {
+            player.player_state = GameTypes.PlayerState.ACTIVE
+        }
+        else
+        {
+            player.player_state = GameTypes.PlayerState.SPECTATING
+        }
         player.player_idx = this.number_of_players;
         this.players.push(player);
         this.number_of_players++;
@@ -108,7 +116,7 @@ export class Game {
         {
             if(this.players[i].nick==nick)
             {
-                this.players[i].active=false;
+                this.players[i].player_state=GameTypes.PlayerState.INACTIVE;
             }
         }
     }
@@ -205,9 +213,13 @@ export class Game {
             this.turn.hand_idx++;
         }
         this.turn.validMoves=this.valid_moves()
-        if(this.players[this.turn.player_idx].active===false)
+        if(this.players[this.turn.player_idx].player_state === GameTypes.PlayerState.INACTIVE)
         {
             this.stand();
+        }
+        if(this.players[this.turn.player_idx].player_state === GameTypes.PlayerState.SPECTATING)
+        {
+            this.next_turn();
         }
         if (this.is_blackjack())
         {
@@ -382,7 +394,7 @@ export class Game {
         this.update_balances()
         for(let i =0;i< this.players.length;i++)
         {
-            if(this.players[i].active===false)
+            if(this.players[i].player_state === GameTypes.PlayerState.INACTIVE)
             {
                 this.delete_player(i);
             }
@@ -393,6 +405,10 @@ export class Game {
         this.deck = shuffle(createDecks(4))
         for(let i =0;i<this.players.length;i++)
         {
+            if(this.players[i].player_state === GameTypes.PlayerState.SPECTATING)
+            {
+                this.players[i].player_state = GameTypes.PlayerState.ACTIVE
+            }
             for(let j=0;j<this.players[i].hands.length;j++)
             {   if(j===0)
                 {
