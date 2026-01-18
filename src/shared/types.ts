@@ -23,15 +23,15 @@ export interface Turn {
     timestamp: number;
     validMoves : string[];
 }
-
+export enum PlayerState {"ACTIVE","INACTIVE","SPECTATING"}
 export interface Player {
     nick: string;
     hands: Hand[];
     balance: number;
     player_idx: number;
-    active : boolean
+    player_state : PlayerState
 }
-
+export enum GamePhase {"BETTING","PLAYING"}
 export interface GameState {
     uuid: string;
     number_of_players: number;
@@ -39,4 +39,5 @@ export interface GameState {
     turn: Turn;
     players: Player[];
     dealer: Dealer;
+    game_phase: GamePhase
 }
