@@ -1,6 +1,6 @@
 import * as GameTypes from "../shared/types";
 
-const d = new Date()
+export const d = new Date()
 function createDecks(numberOfDecks: number = 4): GameTypes.Card[] {
     const deck: GameTypes.Card[] = [];
     const SUITS = ['hearts','diamonds','spades','clubs'];
@@ -12,10 +12,10 @@ function createDecks(numberOfDecks: number = 4): GameTypes.Card[] {
             for(const rank of RANKS)
             {
                 let points = 0;
-                if (rank === 'Q' || rank === 'K' || rank === 'J') {
+                if (rank === 'queen' || rank === 'king' || rank === 'jack') {
                     points = 10;
                 }
-                else if (rank === 'A') {
+                else if (rank === 'ace') {
                     points = 11;
                 }
                 else {
@@ -51,7 +51,7 @@ export class Turn implements GameTypes.Turn {
     {
         this.player_idx = 0;
         this.hand_idx = 0;
-        this.timestamp = d.getTime();
+        this.timestamp = Date.now();
         this.validMoves=[];
     }
 }
@@ -63,7 +63,7 @@ export class Player implements GameTypes.Player {
     public active : boolean
     constructor(nick: string) {
         this.nick = nick
-        this.hands = []
+        this.hands = [{cards : [],bet : 0,number_of_full_aces:0,points:0}]
         this.balance = 1000
         this.player_idx = 0
         this.active = true
@@ -73,8 +73,8 @@ export class Player implements GameTypes.Player {
 export class Game {
 
     private deck : GameTypes.Card[]
-    private players : Player[]
-    private dealer : GameTypes.Dealer
+    public players : Player[]
+    public dealer : GameTypes.Dealer
 
     public uuid: string
     public number_of_players : number
@@ -85,7 +85,7 @@ export class Game {
     {
         this.deck = shuffle(createDecks(4));
         this.players = [];
-        this.dealer = { cards: [], points: 0 }
+        this.dealer = { cards: [], points: 0, number_of_full_aces : 0 }
         this.number_of_players = 0
         this.uuid = globalThis.crypto.randomUUID()
     }
@@ -115,15 +115,16 @@ export class Game {
         let card = this.deck.pop();
         if(card)
         {
-            if(this.turn.player_idx === this.number_of_players)
+            if(card.rank ==='ace')
             {
-                this.dealer.cards.push(card)
-                this.dealer.points+=card.point
+                this.players[this.turn.player_idx].hands[this.turn.hand_idx].number_of_full_aces++;
             }
-            else
+            this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.push(card)
+            this.players[this.turn.player_idx].hands[this.turn.hand_idx].points+=card.point;
+            if(this.players[this.turn.player_idx].hands[this.turn.hand_idx].number_of_full_aces>0 && this.is_bust())
             {
-                this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.push(card)
-                this.players[this.turn.player_idx].hands[this.turn.hand_idx].points+=card.point
+                this.players[this.turn.player_idx].hands[this.turn.hand_idx].points-=10;
+                this.players[this.turn.player_idx].hands[this.turn.hand_idx].number_of_full_aces--;
             }
         }
         
@@ -147,15 +148,34 @@ export class Game {
                 let card = this.deck.pop();
                 if(card)
                 {
+                    if(card.rank === 'ace')
+                    {
+                        this.players[j].hands[0].number_of_full_aces++;
+                    }
+                    
                     this.players[j].hands[0].cards.push(card);
                     this.players[j].hands[0].points+=card.point;
+                    if(this.players[j].hands[0].points === 22)
+                    {
+                        this.players[j].hands[0].points=12;
+                        this.players[j].hands[0].number_of_full_aces--;
+                    }
                 }
             }
             let card = this.deck.pop();
             if(card)
             {
+                if(card.rank === 'ace')
+                {
+                    this.dealer.number_of_full_aces++;
+                }
                 this.dealer.cards.push(card);
                 this.dealer.points+=card.point;
+                if(this.dealer.points===22)
+                {
+                    this.dealer.points = 12;
+                    this.dealer.number_of_full_aces--;
+                }
             }
         }
         this.turn.validMoves=this.valid_moves();
@@ -163,12 +183,13 @@ export class Game {
 
     public next_turn()
     {
-        this.turn.timestamp=d.getTime();
+        this.turn.timestamp=Date.now();
         if(this.players[this.turn.player_idx].hands.length === this.turn.hand_idx+1)
         {
             if(this.players.length === this.turn.player_idx+1)
             {
-                this.play_dealer()
+                this.turn.player_idx++;
+                this.play_dealer();
                 return;
             }
             else
@@ -182,10 +203,15 @@ export class Game {
             this.turn.hand_idx++;
         }
         this.turn.validMoves=this.valid_moves()
+        if(this.players[this.turn.player_idx].active===false)
+        {
+            this.stand();
+        }
         if (this.is_blackjack())
         {
             this.next_turn();
         }
+
     }
     public stand()
     {
@@ -211,14 +237,22 @@ export class Game {
     }
     public split()
     {
+        let nb_of_aces = 0;
         let card = this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
         this.players[this.turn.player_idx].hands[this.turn.hand_idx].points/=2;
+        
         if(card)
         {
-        let newHand : GameTypes.Hand = {
+            if(card.rank === 'ace')
+            {
+                nb_of_aces++;
+            }
+        let newHand : GameTypes.Hand =
+        {
             bet : this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet,
             cards : [card],
-            points : card.point
+            points : card.point,
+            number_of_full_aces : nb_of_aces
 
         };
         this.players[this.turn.player_idx].hands.push(newHand);
@@ -346,7 +380,10 @@ export class Game {
         this.update_balances()
         for(let i =0;i< this.players.length;i++)
         {
-            this.delete_player(i);
+            if(this.players[i].active===false)
+            {
+                this.delete_player(i);
+            }
         }
     }
 }
