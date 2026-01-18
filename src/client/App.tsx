@@ -60,18 +60,16 @@ function App() {
   const [gameState, setGameState] = useState<SharedGameState | null>(null);
   const [nickInput, setNickInput] = useState("");
 
-  /*
   const runTestMode = () => {
     setNick("TestPlayer");
     setGameState(mockGameState);
     setView("game");
   };
-  */
 
   useEffect(() => {
     socket.on("connect", () => console.log("Connected"));
 
-    socket.on("nick_status", (data: { available: boolean; nick: string; }) => {
+    socket.on("nick_status", (data: { available: boolean; nick: string }) => {
       if (data.available) {
         setNick(data.nick);
         setView("lobby");
@@ -94,7 +92,7 @@ function App() {
       setView("game");
     });
 
-    socket.on("error", (err: { msg: string; }) => alert(err.msg));
+    socket.on("error", (err: { msg: string }) => alert(err.msg));
 
     return () => {
       socket.off("connect");
@@ -127,13 +125,13 @@ function App() {
     return (
       <div className="app">
         <h1>Multiplayer Blackjack</h1>
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "center" }}>
+        <div className="login-container">
           <input
             type="text"
             placeholder="Enter nickname"
             value={nickInput}
             onChange={(e) => setNickInput(e.target.value)}
-            style={{ padding: "10px", fontSize: "16px" }}
+            className="login-input"
           />
           <button onClick={handleLogin}>Log In</button>
           {/* <button onClick={runTestMode} style={{ marginTop: "10px", backgroundColor: "#555" }}>
@@ -148,9 +146,9 @@ function App() {
     return (
       <div className="app">
         <h1>Lobby ({nick})</h1>
-        <div style={{ marginBottom: "20px" }}>
+        <div className="lobby-controls">
           <button onClick={handleCreateGame}>Create New Game</button>
-          <button onClick={() => socket.emit("get_games")} style={{ marginLeft: "10px" }}>
+          <button onClick={() => socket.emit("get_games")} className="lobby-refresh-btn">
             Refresh List
           </button>
         </div>
@@ -159,18 +157,7 @@ function App() {
             <p>No games available</p>
           ) : (
             gameIds.map((id, index) => (
-              <div
-                key={`${id}-${index}`}
-                style={{
-                  margin: "10px",
-                  padding: "10px",
-                  border: "1px solid white",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  width: "300px",
-                }}
-              >
+              <div key={`${id}-${index}`} className="game-list-item">
                 <span>Game {id.substring(0, 8)}... </span>
                 <button onClick={() => handleJoinGame(id)}>Join</button>
               </div>
@@ -187,73 +174,35 @@ function App() {
       <button onClick={() => setView("lobby")}>Back to Lobby</button>
 
       {/* Game Controls */}
-      <div
-        className="controls"
-        style={{
-          position: "fixed",
-          bottom: "20px",
-          left: "50%",
-          transform: "translateX(-50%)",
-          backgroundColor: "rgba(0,0,0,0.8)",
-          padding: "20px",
-          borderRadius: "10px",
-          zIndex: 1000,
-          textAlign: "center",
-        }}
-      >
-        <h3 style={{ margin: "0 0 10px 0", color: isMyTurn ? "#4CAF50" : "#FFF" }}>
+      <div className="game-controls">
+        <h3 className={isMyTurn ? "my-turn" : ""}>
           {isMyTurn
             ? "It's your turn!"
             : `Current turn: ${gameState?.players[gameState?.turn.player_idx]?.nick || "Unknown"}`}
         </h3>
         {isMyTurn && (
-          <div style={{ display: "flex", gap: "10px" }}>
+          <div className="game-controls-buttons">
             <button
               onClick={() => validMoves.includes("hit") && socket.emit("hit", gameState.uuid)}
-              style={{
-                padding: "10px 20px",
-                fontSize: "1.2em",
-                backgroundColor: "#2196F3",
-                opacity: validMoves.includes("hit") ? 1 : 0.5,
-                cursor: validMoves.includes("hit") ? "pointer" : "default",
-              }}
+              className={`control-btn btn-hit ${!validMoves.includes("hit") ? "disabled" : ""}`}
             >
               HIT
             </button>
             <button
               onClick={() => validMoves.includes("stand") && socket.emit("stand", gameState.uuid)}
-              style={{
-                padding: "10px 20px",
-                fontSize: "1.2em",
-                backgroundColor: "#f44336",
-                opacity: validMoves.includes("stand") ? 1 : 0.5,
-                cursor: validMoves.includes("stand") ? "pointer" : "default",
-              }}
+              className={`control-btn btn-stand ${!validMoves.includes("stand") ? "disabled" : ""}`}
             >
               STAND
             </button>
             <button
               onClick={() => validMoves.includes("double") && socket.emit("double", gameState.uuid)}
-              style={{
-                padding: "10px 20px",
-                fontSize: "1.2em",
-                backgroundColor: "#FFC107",
-                color: "black",
-                opacity: validMoves.includes("double") ? 1 : 0.5,
-                cursor: validMoves.includes("double") ? "pointer" : "default",
-              }}
+              className={`control-btn btn-double ${!validMoves.includes("double") ? "disabled" : ""}`}
             >
               DOUBLE
             </button>
             <button
               onClick={() => validMoves.includes("split") && socket.emit("split", gameState.uuid)}
-              style={{
-                padding: "10px 20px",
-                fontSize: "1.2em",
-                backgroundColor: "#9C27B0",
-                opacity: validMoves.includes("split") ? 1 : 0.5,
-                cursor: validMoves.includes("split") ? "pointer" : "default",
-              }}
+              className={`control-btn btn-split ${!validMoves.includes("split") ? "disabled" : ""}`}
             >
               SPLIT
             </button>
@@ -271,10 +220,7 @@ function App() {
           </div>
         </div>
 
-        <div
-          className="players-container"
-          style={{ display: "flex", gap: "20px", flexWrap: "wrap", justifyContent: "center" }}
-        >
+        <div className="players-wrapper">
           {gameState?.players.map((player, index) => (
             <div key={`${player.nick}-${index}`} className="player-section">
               <h2>
