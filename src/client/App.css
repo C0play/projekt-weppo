@@ -48,3 +48,102 @@ h1 {
 .read-the-docs {
   color: #888;
 }
+
+/* Login View */
+.login-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.login-input {
+  padding: 10px;
+  font-size: 16px;
+}
+
+/* Lobby View */
+.lobby-controls {
+  margin-bottom: 20px;
+}
+
+.lobby-refresh-btn {
+  margin-left: 10px;
+}
+
+.game-list-item {
+  margin: 10px;
+  padding: 10px;
+  border: 1px solid white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 300px;
+}
+
+/* Game View Controls */
+.game-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: rgba(0, 0, 0, 0.8);
+  padding: 20px;
+  border-radius: 10px;
+  z-index: 1000;
+  text-align: center;
+}
+
+.game-controls h3 {
+  margin: 0 0 10px 0;
+  color: #fff; /* Default color */
+}
+
+.game-controls h3.my-turn {
+  color: #4caf50;
+}
+
+.game-controls-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.control-btn {
+  padding: 10px 20px;
+  font-size: 1.2em;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.control-btn:disabled,
+.control-btn.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.btn-hit {
+  background-color: #2196f3;
+}
+
+.btn-stand {
+  background-color: #f44336;
+}
+
+.btn-double {
+  background-color: #ffc107;
+  color: black;
+}
+
+.btn-split {
+  background-color: #9c27b0;
+}
+
+.players-wrapper {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
