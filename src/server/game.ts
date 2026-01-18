@@ -220,7 +220,7 @@ export class Game {
         this.draw_card()
         if(this.is_bust())
         {
-            this.next_turn;
+            this.next_turn();
         }
     }
     private win()

@@ -4,7 +4,7 @@ import "./App.css";
 import Card from "./components/Card";
 import { GameState as SharedGameState } from "../shared/types";
 
-const socket: Socket = io("http://192.168.0.200:3000", { autoConnect: false });
+const socket: Socket = io("http://" + "localhost" + ":" + 3000, { autoConnect: false });
 
 // MOCK DATA FOR TESTING WITHOUT SERVER
 const mockGameState: SharedGameState = {
@@ -71,7 +71,7 @@ function App() {
   useEffect(() => {
     socket.on("connect", () => console.log("Connected"));
 
-    socket.on("nick_status", (data: { available: boolean; nick: string }) => {
+    socket.on("nick_status", (data: { available: boolean; nick: string; }) => {
       if (data.available) {
         setNick(data.nick);
         setView("lobby");
@@ -94,7 +94,7 @@ function App() {
       setView("game");
     });
 
-    socket.on("error", (err: { msg: string }) => alert(err.msg));
+    socket.on("error", (err: { msg: string; }) => alert(err.msg));
 
     return () => {
       socket.off("connect");
@@ -209,7 +209,7 @@ function App() {
         {isMyTurn && (
           <div style={{ display: "flex", gap: "10px" }}>
             <button
-              onClick={() => validMoves.includes("hit") && socket.emit("hit")}
+              onClick={() => validMoves.includes("hit") && socket.emit("hit", gameState.uuid)}
               style={{
                 padding: "10px 20px",
                 fontSize: "1.2em",
@@ -221,7 +221,7 @@ function App() {
               HIT
             </button>
             <button
-              onClick={() => validMoves.includes("stand") && socket.emit("stand")}
+              onClick={() => validMoves.includes("stand") && socket.emit("stand", gameState.uuid)}
               style={{
                 padding: "10px 20px",
                 fontSize: "1.2em",
@@ -233,7 +233,7 @@ function App() {
               STAND
             </button>
             <button
-              onClick={() => validMoves.includes("double") && socket.emit("double")}
+              onClick={() => validMoves.includes("double") && socket.emit("double", gameState.uuid)}
               style={{
                 padding: "10px 20px",
                 fontSize: "1.2em",
@@ -246,7 +246,7 @@ function App() {
               DOUBLE
             </button>
             <button
-              onClick={() => validMoves.includes("split") && socket.emit("split")}
+              onClick={() => validMoves.includes("split") && socket.emit("split", gameState.uuid)}
               style={{
                 padding: "10px 20px",
                 fontSize: "1.2em",

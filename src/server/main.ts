@@ -15,7 +15,7 @@ const server = createServer(app);
 const io = new Server(server, {
   cors: {
     origin: "*",
-    methods: [ "GET", "POST" ]
+    methods: ["GET", "POST"]
   }
 });
 
@@ -28,16 +28,15 @@ app.get("/", (_req: Request, res: Response) => {
 });
 
 io.on("connection", (socket: Socket) => {
+  console.log(socket.id);
+
   // Nick creation
   socket.on("create_nick", (nick: string) => {
-    console.log(socket.id + " new_nick: " + nick);
     if (nicks.has(nick)) {
       socket.emit("nick_status", { available: false, nick });
-      console.log("sending ack false");
     } else {
       nicks.add(nick);
       socket.emit("nick_status", { available: true, nick });
-      console.log("sending ack true");
     }
   });
 
@@ -102,10 +101,54 @@ io.on("connection", (socket: Socket) => {
     io.to(game.uuid).emit("game", game);
   });
 
-  // 
+  // ===== GAME MOVES =====
+  // Hit
+  socket.on("hit", (game_id: string) => {
+    console.log("hit");
+    const game = games.get(game_id);
+    if (game === undefined) {
+      socket.emit("error", { msg: "no game with " + game_id + " found" });
+      return;
+    }
+    game.hit();
+    io.to(game.uuid).emit("game", game);
+  });
+  // Stand
+  socket.on("stand", (game_id: string) => {
+    console.log("stand");
+    const game = games.get(game_id);
+    if (game === undefined) {
+      socket.emit("error", { msg: "no game with " + game_id + " found" });
+      return;
+    }
+    game.stand();
+    io.to(game.uuid).emit("game", game);
+  });
+  // Double
+  socket.on("double", (game_id: string) => {
+    console.log("double");
+    const game = games.get(game_id);
+    if (game === undefined) {
+      socket.emit("error", { msg: "no game with " + game_id + " found" });
+      return;
+    }
+    game.double();
+    io.to(game.uuid).emit("game", game);
+  });
+  // Split
+  socket.on("split", (game_id: string) => {
+    console.log("split");
+    const game = games.get(game_id);
+    if (game === undefined) {
+      socket.emit("error", { msg: "no game with " + game_id + " found" });
+      return;
+    }
+    game.split();
+    io.to(game.uuid).emit("game", game);
+  });
 
 });
 
-server.listen(3000, "0.0.0.0", () => {
+server.listen(3000, "localhost", () => {
   console.log("server running at ", server.address());
 });
