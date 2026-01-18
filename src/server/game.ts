@@ -436,11 +436,14 @@ export class Game {
         {
             this.game_phase= GameTypes.GamePhase.PLAYING;
             this.deal_cards();
+            return;
         }
         if(this.game_phase === GameTypes.GamePhase.PLAYING)
         {
             this.game_phase=GameTypes.GamePhase.BETTING;
             this.new_game();
+            return;
         }
     }
 }
+ 
