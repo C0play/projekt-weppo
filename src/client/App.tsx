@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import "./App.css";
 import Card from "./components/Card";
+import PlayerSection from "./components/PlayerSection";
 import { GameState as SharedGameState, PlayerState, GamePhase } from "../shared/types";
 
 const socket: Socket = io("http://" + "localhost" + ":" + 3000, { autoConnect: false });
@@ -71,11 +72,20 @@ const mockGameState: SharedGameState = {
             { rank: "9", suit: "spades", point: 9 },
           ],
         },
+        {
+          bet: 100,
+          points: 18,
+          number_of_full_aces: 0,
+          cards: [
+            { rank: "8", suit: "clubs", point: 8 },
+            { rank: "queen", suit: "diamonds", point: 10 },
+          ],
+        },
       ],
     },
     {
       nick: "Bot4",
-      balance: 800,
+      balance: 0,
       player_idx: 3,
       player_state: PlayerState.ACTIVE,
       hands: [
@@ -290,27 +300,13 @@ function App() {
 
         <div className="players-wrapper">
           {gameState?.players.map((player, index) => (
-            <div
+            <PlayerSection
               key={`${player.nick}-${index}`}
-              className="player-section"
+              player={player}
+              isCurrentUser={player.nick === nick}
               style={getPlayerStyle(index, gameState.players.length)}
-            >
-              <h2>
-                {player.nick} {player.nick === nick ? "(You)" : ""}
-              </h2>
-              {player.hands.map((hand, hIndex) => (
-                <div key={hIndex} className="hand-section">
-                  <p>
-                    Bet: {hand.bet} | Points: {hand.points}
-                  </p>
-                  <div className="cards">
-                    {hand.cards.map((card, cIndex) => (
-                      <Card key={cIndex} card={card} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+              activeHandIndex={gameState.turn.player_idx === player.player_idx ? gameState.turn.hand_idx : undefined}
+            />
           ))}
         </div>
       </div>

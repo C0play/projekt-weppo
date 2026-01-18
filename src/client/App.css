@@ -150,18 +150,57 @@ h2 {
    ============================ */
 .players-wrapper {
   display: flex;
-  justify-content: center;
-  align-items: flex-end; /* Align bottom */
+  justify-content: flex-start; /* Start by default to allow scrolling left items */
+  align-items: flex-end;
   width: 100%;
-  padding-bottom: 40px; /* Lift players up a bit more from bottom edge */
-  padding-top: 160px; /* Space for the name badges to hang out (arc can go up ~130px) */
-  position: relative; /* Ensure z-index applies */
-  z-index: 10; /* Strictly above ::before */
-  gap: 20px; /* Fallback spacing */
-  flex-wrap: nowrap; /* Don't wrap, we want an arc row */
-  overflow-x: auto; /* Scroll if too many players on small screen */
-  overflow-y: visible; /* Try to allow vertical overflow if supported, though x-auto usually forces block formatting */
-  margin-top: 0; /* Removing top margin as padding handles spacing */
+  padding-bottom: 40px;
+  padding-top: 160px;
+  position: relative;
+  z-index: 10;
+  gap: 20px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: visible;
+  margin-top: 0;
+}
+
+/* Safe Center for Desktop: Use auto margins on ends to center when possible */
+@media (min-width: 901px) {
+  .players-wrapper .player-section:first-child {
+    margin-left: auto;
+  }
+  .players-wrapper .player-section:last-child {
+    margin-right: auto;
+  }
+}
+
+@media (max-width: 900px) {
+  .players-wrapper {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: 50vh; /* Scrollable area */
+    padding-top: 20px; /* Reset top padding since no arc */
+    padding-bottom: 20px;
+    gap: 30px;
+  }
+
+  .player-section {
+    transform: none !important; /* Disable Arc calc */
+    width: 90%;
+    margin-bottom: 15px;
+    order: 1; /* Default order for everyone */
+  }
+
+  /* "You" go to top */
+  .player-section.current-user {
+    order: -1;
+    border-color: #4caf50; /* Highlight current user slightly */
+    box-shadow: 0 0 15px rgba(76, 175, 80, 0.4);
+    margin-bottom: 30px; /* Extra space after YOU */
+  }
 }
 
 /* Individual Player Spot */
@@ -389,4 +428,68 @@ h2 {
   margin-left: 10px;
 }
 
+/* ============================
+   All-in Effect
+   ============================ */
+.all-in-bet {
+  display: inline-block;
+  color: #ffd700;
+  font-weight: 900;
+  text-shadow:
+    0 0 5px #ffd700,
+    0 0 10px #ff8c00;
+  animation: goldPulse 0.8s infinite alternate;
+}
+
+@keyframes goldPulse {
+  0% {
+    transform: scale(1);
+    text-shadow: 0 0 5px #ffd700;
+  }
+  100% {
+    transform: scale(1.2);
+    text-shadow:
+      0 0 15px #ffd700,
+      0 0 25px #ff8c00,
+      0 0 35px #ff0000;
+  }
+}
+
 /* End of file */
+
+/* Split Hand Selector Styles */
+.hand-selector {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.hand-btn {
+  background-color: #444;
+  color: #eee;
+  border: 1px solid #666;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  padding: 0;
+}
+
+.hand-btn.active {
+  background-color: #ffd700;
+  color: #000;
+  font-weight: bold;
+  border-color: #fff;
+  transform: scale(1.1);
+}
+
+.hand-btn:hover:not(.active) {
+  background-color: #666;
+}
