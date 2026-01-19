@@ -82,18 +82,23 @@ export class Game {
     public turn = new Turn()
     public game_phase : GameTypes.GamePhase
 
-    constructor()
+    constructor(uuid : string)
     {
         this.deck = shuffle(createDecks(4));
         this.players = [];
         this.dealer = { cards: [], points: 0, number_of_full_aces : 0 }
         this.number_of_players = 0
-        this.uuid = globalThis.crypto.randomUUID()
+        this.uuid = uuid
         this.game_phase = GameTypes.GamePhase.BETTING
     }
 
-    public add_player(player : Player): void
+    public connect_player(nick : string): boolean
     {
+        if(this.number_of_players+1 > this.max_players)
+        {
+            return false;
+        }
+        let player = new Player(nick)
         if(this.game_phase === GameTypes.GamePhase.BETTING)
         {
             player.player_state = GameTypes.PlayerState.ACTIVE
@@ -105,21 +110,39 @@ export class Game {
         player.player_idx = this.number_of_players;
         this.players.push(player);
         this.number_of_players++;
+        return true;
     }
-    private delete_player(idx : number)
+
+    public disconnect_player(nick: string) : void
     {
-        this.players.splice(idx,1)
-    }
-    public player_to_delete(nick: string)
-    {
+        let idx = 0;
+
         for(let i =0 ;i<this.players.length;i++)
         {
             if(this.players[i].nick==nick)
             {
-                this.players[i].player_state=GameTypes.PlayerState.INACTIVE;
+                idx = 1;
+                break;
             }
         }
+
+        if(this.game_phase === GameTypes.GamePhase.BETTING)
+        {
+            this.delete_player(idx);
+            return
+        }
+        else
+        {
+            this.players[idx].player_state===GameTypes.PlayerState.INACTIVE;
+            return;
+        }
     }
+    private delete_player(idx : number) : void
+    {
+        this.players.splice(idx,1)
+    }
+
+
     public draw_card(): void
     {
         let card = this.deck.pop();
@@ -140,6 +163,7 @@ export class Game {
         
 
     }
+
     private draw_dealer() : void
     {
         let card = this.deck.pop();
@@ -149,6 +173,7 @@ export class Game {
             this.dealer.points+=card.point;
         }
     }
+
     public deal_cards() : void
     {
         for(let i = 0;i<2;i++)
@@ -173,6 +198,7 @@ export class Game {
                 }
             }
             let card = this.deck.pop();
+
             if(card)
             {
                 if(card.rank === 'ace')
@@ -191,7 +217,7 @@ export class Game {
         this.turn.validMoves=this.valid_moves();
     }
 
-    public next_turn()
+    public next_turn() : void
     {
         this.turn.timestamp=Date.now();
         if(this.players[this.turn.player_idx].hands.length === this.turn.hand_idx+1)
@@ -227,16 +253,19 @@ export class Game {
         }
 
     }
-    public stand()
+
+    public stand() : void
     {
         this.next_turn();
     }
-    public double()
+
+    public double() : void
     {
         this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet*=2;
         this.draw_card();
         this.next_turn();
     }
+
     private valid_moves() : string[]
     {
         let validm = ["HIT","STAND","DOUBLE"];
@@ -249,7 +278,8 @@ export class Game {
         }
         return validm;
     }
-    public split()
+
+    public split() : void
     {
         let nb_of_aces = 0;
         let card = this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
@@ -273,6 +303,7 @@ export class Game {
         }
 
     }
+
     private is_bust() : boolean
     {
         if(this.players[this.turn.player_idx].hands[this.turn.hand_idx].points > 21)
@@ -281,6 +312,7 @@ export class Game {
         }
         return false;
     }
+
     private is_blackjack() : boolean
     {
         if(this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.length===2 && 
@@ -291,6 +323,7 @@ export class Game {
         }
         return false;
     }
+
     private is_dealer_blackjack() : boolean
     {
         if(this.dealer.cards.length===2 && this.dealer.points===21)
@@ -299,7 +332,8 @@ export class Game {
         }
         return false;
     }
-    public hit()
+
+    public hit() : void
     {
         this.draw_card()
         if(this.is_bust())
@@ -307,6 +341,7 @@ export class Game {
             this.next_turn();
         }
     }
+
     public bet(bet_amount : number,nick : string) : boolean
     {
         for(let i=0;i<this.players.length;i++)
@@ -327,19 +362,23 @@ export class Game {
         }
         return false;
     }
-    private win(player_idx: number, hand_idx: number)
+
+    private win(player_idx: number, hand_idx: number) : void
     {
         this.players[player_idx].balance += 2*this.players[player_idx].hands[hand_idx].bet;
     }
-    private win_bj(player_idx: number, hand_idx: number)
+
+    private win_bj(player_idx: number, hand_idx: number) : void
     {
         this.players[player_idx].balance += Math.round(2.5*this.players[player_idx].hands[hand_idx].bet);
     }
-    private push(player_idx: number, hand_idx: number)
+
+    private push(player_idx: number, hand_idx: number) : void
     {
         this.players[player_idx].balance += this.players[player_idx].hands[hand_idx].bet;
     }
-    private update_balances()
+
+    private update_balances() : void
     {
         for(let i=0; i<this.number_of_players;i++)
         {
@@ -376,11 +415,11 @@ export class Game {
                         this.win(i, j);
                     }
                 }
-                
             }
         }
     }
-    private play_dealer()
+
+    private play_dealer() : void
     {
         if(this.is_dealer_blackjack())
         {
@@ -400,7 +439,8 @@ export class Game {
             }
         }
     }
-    public new_game()
+
+    public new_game() : void
     {
         this.deck = shuffle(createDecks(4))
         for(let i =0;i<this.players.length;i++)
@@ -430,7 +470,8 @@ export class Game {
         this.turn.hand_idx=0;
         this.turn.player_idx=0;
     }
-    public change_game_phase()
+
+    public change_game_phase() : void
     {
         if(this.game_phase === GameTypes.GamePhase.BETTING)
         {
