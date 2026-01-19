@@ -253,22 +253,22 @@ export class Game {
     {
         let nb_of_aces = 0;
         let card = this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx].points/=2;
         
         if(card)
-        {
+            {
+            this.players[this.turn.player_idx].hands[this.turn.hand_idx].points=card.point
             if(card.rank === 'ace')
             {
                 nb_of_aces++;
             }
-        let newHand : GameTypes.Hand =
-        {
+            let newHand : GameTypes.Hand =
+            {
             bet : this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet,
             cards : [card],
             points : card.point,
             number_of_full_aces : nb_of_aces
 
-        };
+            };
         this.players[this.turn.player_idx].hands.push(newHand);
         }
 
