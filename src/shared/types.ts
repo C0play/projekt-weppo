@@ -8,6 +8,7 @@ export interface Hand {
     bet: number;
     cards: Card[];
     points: number;
+    is_insured: boolean
     number_of_full_aces : number;
 }
 

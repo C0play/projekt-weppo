@@ -63,7 +63,7 @@ export class Player implements GameTypes.Player {
     public player_state : GameTypes.PlayerState;
     constructor(nick: string) {
         this.nick = nick
-        this.hands = [{cards : [],bet : 0,number_of_full_aces:0,points:0}]
+        this.hands = [{cards : [],bet : 0,number_of_full_aces:0,points:0, is_insured: false}]
         this.balance = 1000
         this.player_idx = 0
         this.player_state = GameTypes.PlayerState.INACTIVE
@@ -214,9 +214,33 @@ export class Game {
                 }
             }
         }
+        if(this.dealer.cards[0].rank==='ace')
+        {
+            this.turn.validMoves=["INSURANCE"];
+            return;
+        }
         this.turn.validMoves=this.valid_moves();
-    }
 
+    }
+    private next_insurance_turn() : void
+    {
+        if(this.turn.player_idx+1===this.players.length)
+        {
+            this.turn = new Turn();
+            if(this.is_dealer_blackjack())
+            {
+                this.play_dealer();
+            }
+            else
+            {
+            this.turn.validMoves=this.valid_moves();
+            }
+        }
+        else
+        {
+            this.turn.player_idx++;
+        }
+    }
     public next_turn() : void
     {
         this.turn.timestamp=Date.now();
@@ -247,9 +271,9 @@ export class Game {
         {
             this.next_turn();
         }
-        if (this.is_blackjack())
+        if (this.is_blackjack(this.turn.player_idx,this.turn.hand_idx))
         {
-            this.next_turn();
+            this.stand();
         }
 
     }
@@ -296,8 +320,8 @@ export class Game {
             bet : this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet,
             cards : [card],
             points : card.point,
-            number_of_full_aces : nb_of_aces
-
+            number_of_full_aces : nb_of_aces,
+            is_insured: false
             };
         this.players[this.turn.player_idx].hands.push(newHand);
         }
@@ -313,10 +337,10 @@ export class Game {
         return false;
     }
 
-    private is_blackjack() : boolean
+    private is_blackjack(player_idx : number, hand_idx : number) : boolean
     {
-        if(this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.length===2 && 
-            this.players[this.turn.player_idx].hands[this.turn.hand_idx].points===21
+        if(this.players[player_idx].hands[hand_idx].cards.length===2 && 
+            this.players[player_idx].hands[hand_idx].points===21
         )
         {
             return true;
@@ -341,7 +365,16 @@ export class Game {
             this.next_turn();
         }
     }
-
+    public insurance(decision : boolean) : void
+    {
+        if(decision === true)
+        {
+            this.players[this.turn.player_idx].balance-=Math.round(this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet/2);
+            this.players[this.turn.player_idx].hands[this.turn.hand_idx].is_insured=true;
+        }
+        this.next_insurance_turn();
+        return;
+    }
     public bet(bet_amount : number,nick : string) : boolean
     {
         for(let i=0;i<this.players.length;i++)
@@ -377,6 +410,10 @@ export class Game {
     {
         this.players[player_idx].balance += this.players[player_idx].hands[hand_idx].bet;
     }
+    private insurance_payout(player_idx: number, hand_idx: number) : void
+    {
+        this.players[player_idx].balance+=Math.round(1.5*this.players[player_idx].hands[hand_idx].bet)
+    }
 
     private update_balances() : void
     {
@@ -385,8 +422,21 @@ export class Game {
             for(let j=0;j<this.players[i].hands.length;j++)
             {
                 let points = this.players[i].hands[j].points;
-                const isPlayerBJ = (this.players[i].hands[j].cards.length === 2 && points === 21);
-
+                const isPlayerBJ = this.is_blackjack(i,j)
+                const isHandInsured = this.players[i].hands[j].is_insured;
+                if(this.is_dealer_blackjack())
+                {
+                    if(isPlayerBJ)
+                    {
+                        this.push(i,j);
+                    }
+                    if(isHandInsured)
+                    {
+                        this.insurance_payout(i,j);
+                    }
+                    continue;
+                }
+                
                 if(isPlayerBJ && !this.is_dealer_blackjack())
                 {
                     this.win_bj(i, j);
@@ -486,5 +536,7 @@ export class Game {
             return;
         }
     }
+    
+
 }
  
