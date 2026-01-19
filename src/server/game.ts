@@ -63,7 +63,7 @@ export class Player implements GameTypes.Player {
     public player_state : GameTypes.PlayerState;
     constructor(nick: string) {
         this.nick = nick
-        this.hands = [{cards : [],bet : 0,number_of_full_aces:0,points:0}]
+        this.hands = [{cards : [],bet : 0,number_of_full_aces:0,points:0, is_insured: false}]
         this.balance = 1000
         this.player_idx = 0
         this.player_state = GameTypes.PlayerState.INACTIVE
@@ -82,18 +82,23 @@ export class Game {
     public turn = new Turn()
     public game_phase : GameTypes.GamePhase
 
-    constructor()
+    constructor(uuid : string)
     {
         this.deck = shuffle(createDecks(4));
         this.players = [];
         this.dealer = { cards: [], points: 0, number_of_full_aces : 0 }
         this.number_of_players = 0
-        this.uuid = globalThis.crypto.randomUUID()
+        this.uuid = uuid
         this.game_phase = GameTypes.GamePhase.BETTING
     }
 
-    public add_player(player : Player): void
+    public connect_player(nick : string): boolean
     {
+        if(this.number_of_players+1 > this.max_players)
+        {
+            return false;
+        }
+        let player = new Player(nick)
         if(this.game_phase === GameTypes.GamePhase.BETTING)
         {
             player.player_state = GameTypes.PlayerState.ACTIVE
@@ -105,21 +110,39 @@ export class Game {
         player.player_idx = this.number_of_players;
         this.players.push(player);
         this.number_of_players++;
+        return true;
     }
-    private delete_player(idx : number)
+
+    public disconnect_player(nick: string) : void
     {
-        this.players.splice(idx,1)
-    }
-    public player_to_delete(nick: string)
-    {
+        let idx = 0;
+
         for(let i =0 ;i<this.players.length;i++)
         {
             if(this.players[i].nick==nick)
             {
-                this.players[i].player_state=GameTypes.PlayerState.INACTIVE;
+                idx = 1;
+                break;
             }
         }
+
+        if(this.game_phase === GameTypes.GamePhase.BETTING)
+        {
+            this.delete_player(idx);
+            return
+        }
+        else
+        {
+            this.players[idx].player_state===GameTypes.PlayerState.INACTIVE;
+            return;
+        }
     }
+    private delete_player(idx : number) : void
+    {
+        this.players.splice(idx,1)
+    }
+
+
     public draw_card(): void
     {
         let card = this.deck.pop();
@@ -140,6 +163,7 @@ export class Game {
         
 
     }
+
     private draw_dealer() : void
     {
         let card = this.deck.pop();
@@ -149,6 +173,7 @@ export class Game {
             this.dealer.points+=card.point;
         }
     }
+
     public deal_cards() : void
     {
         for(let i = 0;i<2;i++)
@@ -173,6 +198,7 @@ export class Game {
                 }
             }
             let card = this.deck.pop();
+
             if(card)
             {
                 if(card.rank === 'ace')
@@ -188,10 +214,34 @@ export class Game {
                 }
             }
         }
+        if(this.dealer.cards[0].rank==='ace')
+        {
+            this.turn.validMoves=["INSURANCE"];
+            return;
+        }
         this.turn.validMoves=this.valid_moves();
-    }
 
-    public next_turn()
+    }
+    private next_insurance_turn() : void
+    {
+        if(this.turn.player_idx+1===this.players.length)
+        {
+            this.turn = new Turn();
+            if(this.is_dealer_blackjack())
+            {
+                this.play_dealer();
+            }
+            else
+            {
+            this.turn.validMoves=this.valid_moves();
+            }
+        }
+        else
+        {
+            this.turn.player_idx++;
+        }
+    }
+    public next_turn() : void
     {
         this.turn.timestamp=Date.now();
         if(this.players[this.turn.player_idx].hands.length === this.turn.hand_idx+1)
@@ -221,22 +271,25 @@ export class Game {
         {
             this.next_turn();
         }
-        if (this.is_blackjack())
+        if (this.is_blackjack(this.turn.player_idx,this.turn.hand_idx))
         {
-            this.next_turn();
+            this.stand();
         }
 
     }
-    public stand()
+
+    public stand() : void
     {
         this.next_turn();
     }
-    public double()
+
+    public double() : void
     {
         this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet*=2;
         this.draw_card();
         this.next_turn();
     }
+
     private valid_moves() : string[]
     {
         let validm = ["HIT","STAND","DOUBLE"];
@@ -249,30 +302,32 @@ export class Game {
         }
         return validm;
     }
-    public split()
+
+    public split() : void
     {
         let nb_of_aces = 0;
         let card = this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx].points/=2;
         
         if(card)
-        {
+            {
+            this.players[this.turn.player_idx].hands[this.turn.hand_idx].points=card.point
             if(card.rank === 'ace')
             {
                 nb_of_aces++;
             }
-        let newHand : GameTypes.Hand =
-        {
+            let newHand : GameTypes.Hand =
+            {
             bet : this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet,
             cards : [card],
             points : card.point,
-            number_of_full_aces : nb_of_aces
-
-        };
+            number_of_full_aces : nb_of_aces,
+            is_insured: false
+            };
         this.players[this.turn.player_idx].hands.push(newHand);
         }
 
     }
+
     private is_bust() : boolean
     {
         if(this.players[this.turn.player_idx].hands[this.turn.hand_idx].points > 21)
@@ -281,16 +336,18 @@ export class Game {
         }
         return false;
     }
-    private is_blackjack() : boolean
+
+    private is_blackjack(player_idx : number, hand_idx : number) : boolean
     {
-        if(this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.length===2 && 
-            this.players[this.turn.player_idx].hands[this.turn.hand_idx].points===21
+        if(this.players[player_idx].hands[hand_idx].cards.length===2 && 
+            this.players[player_idx].hands[hand_idx].points===21
         )
         {
             return true;
         }
         return false;
     }
+
     private is_dealer_blackjack() : boolean
     {
         if(this.dealer.cards.length===2 && this.dealer.points===21)
@@ -299,13 +356,24 @@ export class Game {
         }
         return false;
     }
-    public hit()
+
+    public hit() : void
     {
         this.draw_card()
         if(this.is_bust())
         {
             this.next_turn();
         }
+    }
+    public insurance(decision : boolean) : void
+    {
+        if(decision === true)
+        {
+            this.players[this.turn.player_idx].balance-=Math.round(this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet/2);
+            this.players[this.turn.player_idx].hands[this.turn.hand_idx].is_insured=true;
+        }
+        this.next_insurance_turn();
+        return;
     }
     public bet(bet_amount : number,nick : string) : boolean
     {
@@ -327,27 +395,48 @@ export class Game {
         }
         return false;
     }
-    private win(player_idx: number, hand_idx: number)
+
+    private win(player_idx: number, hand_idx: number) : void
     {
         this.players[player_idx].balance += 2*this.players[player_idx].hands[hand_idx].bet;
     }
-    private win_bj(player_idx: number, hand_idx: number)
+
+    private win_bj(player_idx: number, hand_idx: number) : void
     {
         this.players[player_idx].balance += Math.round(2.5*this.players[player_idx].hands[hand_idx].bet);
     }
-    private push(player_idx: number, hand_idx: number)
+
+    private push(player_idx: number, hand_idx: number) : void
     {
         this.players[player_idx].balance += this.players[player_idx].hands[hand_idx].bet;
     }
-    private update_balances()
+    private insurance_payout(player_idx: number, hand_idx: number) : void
+    {
+        this.players[player_idx].balance+=Math.round(1.5*this.players[player_idx].hands[hand_idx].bet)
+    }
+
+    private update_balances() : void
     {
         for(let i=0; i<this.number_of_players;i++)
         {
             for(let j=0;j<this.players[i].hands.length;j++)
             {
                 let points = this.players[i].hands[j].points;
-                const isPlayerBJ = (this.players[i].hands[j].cards.length === 2 && points === 21);
-
+                const isPlayerBJ = this.is_blackjack(i,j)
+                const isHandInsured = this.players[i].hands[j].is_insured;
+                if(this.is_dealer_blackjack())
+                {
+                    if(isPlayerBJ)
+                    {
+                        this.push(i,j);
+                    }
+                    if(isHandInsured)
+                    {
+                        this.insurance_payout(i,j);
+                    }
+                    continue;
+                }
+                
                 if(isPlayerBJ && !this.is_dealer_blackjack())
                 {
                     this.win_bj(i, j);
@@ -376,11 +465,11 @@ export class Game {
                         this.win(i, j);
                     }
                 }
-                
             }
         }
     }
-    private play_dealer()
+
+    private play_dealer() : void
     {
         if(this.is_dealer_blackjack())
         {
@@ -400,7 +489,8 @@ export class Game {
             }
         }
     }
-    public new_game()
+
+    public new_game() : void
     {
         this.deck = shuffle(createDecks(4))
         for(let i =0;i<this.players.length;i++)
@@ -430,7 +520,8 @@ export class Game {
         this.turn.hand_idx=0;
         this.turn.player_idx=0;
     }
-    public change_game_phase()
+
+    public change_game_phase() : void
     {
         if(this.game_phase === GameTypes.GamePhase.BETTING)
         {
@@ -445,5 +536,7 @@ export class Game {
             return;
         }
     }
+    
+
 }
  
