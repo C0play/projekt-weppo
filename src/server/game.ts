@@ -216,7 +216,7 @@ export class Game {
         }
         if(this.dealer.cards[0].rank==='ace')
         {
-            this.turn.validMoves=["INSURANCE"];
+            this.turn.validMoves=["insurance"];
             return;
         }
         this.turn.validMoves=this.valid_moves();
@@ -292,13 +292,13 @@ export class Game {
 
     private valid_moves() : string[]
     {
-        let validm = ["HIT","STAND","DOUBLE"];
+        let validm = ["hit","stand","double"];
         const cards = this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards;
         if (cards.length > 2) {
             return validm;
         }
         if (cards.length === 2 && cards[0].rank === cards[1].rank) {
-            validm.push("SPLIT");
+            validm.push("split");
         }
         return validm;
     }
