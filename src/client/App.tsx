@@ -168,12 +168,6 @@ function App() {
     socket.emit("join_game", nick, gameId);
   };
 
-  const isMyTurn = gameState && gameState.players[gameState.turn.player_idx]?.nick === nick;
-  const validMoves = gameState?.turn.validMoves?.map((m) => m.toLowerCase()) || [];
-
-  const currentPlayer = gameState?.players.find((p) => p.nick === nick);
-  const currentBalance = currentPlayer?.balance || 0;
-
   // Helper to position players in an arc
   const getPlayerStyle = (index: number, total: number) => {
     // Basic arc calculation
@@ -239,6 +233,15 @@ function App() {
     );
   }
 
+  if (!gameState) {
+    return <div className="app">Loading game state...</div>;
+  }
+
+  const isMyTurn = gameState.players[gameState.turn.player_idx]?.nick === nick;
+  const validMoves = gameState.turn.validMoves.map((m) => m.toLowerCase());
+  const currentPlayer = gameState.players.find((p) => p.nick === nick);
+  const currentBalance = currentPlayer?.balance || 0;
+
   return (
     <div className="app">
       {/* Game Controls */}
@@ -246,7 +249,7 @@ function App() {
         <h3 className={isMyTurn ? "my-turn" : ""}>
           {isMyTurn
             ? "It's your turn!"
-            : `Current turn: ${gameState?.players[gameState?.turn.player_idx]?.nick || "Unknown"}`}
+            : `Current turn: ${gameState.players[gameState.turn.player_idx]?.nick || "Unknown"}`}
         </h3>
         {isMyTurn && (
           <div className="game-controls-buttons">
@@ -283,23 +286,23 @@ function App() {
           EXIT ROOM
         </button>
         <div className="room-info">
-          <div>Room: {gameState?.uuid.substring(0, 8)}...</div>
+          <div>Room: {gameState.uuid.substring(0, 8)}...</div>
           <div className="balance-info">
             Balance: <span className="money">${currentBalance}</span>
           </div>
         </div>
 
         <div className="dealer-section">
-          <h2>Dealer (Points: {gameState?.dealer.points})</h2>
+          <h2>Dealer (Points: {gameState.dealer.points})</h2>
           <div className="cards">
-            {gameState?.dealer.cards.map((card, index) => (
+            {gameState.dealer.cards.map((card, index) => (
               <Card key={index} card={card} />
             ))}
           </div>
         </div>
 
         <div className="players-wrapper">
-          {gameState?.players.map((player, index) => (
+          {gameState.players.map((player, index) => (
             <PlayerSection
               key={`${player.nick}-${index}`}
               player={player}
