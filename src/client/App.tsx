@@ -1,11 +1,18 @@
 import { useState, useEffect } from "react";
 import { io, Socket } from "socket.io-client";
+
 import "./App.css";
 import Card from "./components/Card";
 import PlayerSection from "./components/PlayerSection";
-import { GameState as SharedGameState, PlayerState, GamePhase } from "../shared/types";
 
-const socket: Socket = io("http://" + "localhost" + ":" + 3000, { autoConnect: false });
+import { GameState as SharedGameState, PlayerState, GamePhase } from "../game/types";
+import { Action } from "../shared/types";
+import { Config } from "../shared/config";
+
+
+
+const socket: Socket = io("http://" + Config.CLIENT_IP + ":" + Config.CLIENT_PORT, { autoConnect: false });
+
 
 // MOCK DATA FOR TESTING WITHOUT SERVER
 const mockGameState: SharedGameState = {
@@ -13,7 +20,7 @@ const mockGameState: SharedGameState = {
   number_of_players: 4,
   max_players: 4,
   game_phase: GamePhase.PLAYING,
-  turn: { player_idx: 0, hand_idx: 0, timestamp: Date.now(), validMoves: ["hit", "stand", "double"] },
+  turn: { player_idx: 0, hand_idx: 0, timestamp: Date.now(), validMoves: [Action.HIT, Action.STAND, Action.DOUBLE] },
   dealer: {
     cards: [
       { rank: "ace", suit: "spades", point: 11 },
@@ -119,7 +126,7 @@ function App() {
   useEffect(() => {
     socket.on("connect", () => console.log("Connected"));
 
-    socket.on("nick_status", (data: { available: boolean; nick: string }) => {
+    socket.on("nick_status", (data: { available: boolean; nick: string; }) => {
       if (data.available) {
         setNick(data.nick);
         setView("lobby");
@@ -142,7 +149,7 @@ function App() {
       setView("game");
     });
 
-    socket.on("error", (err: { msg: string }) => alert(err.msg));
+    socket.on("error", (err: { msg: string; }) => alert(err.msg));
 
     return () => {
       socket.off("connect");
@@ -161,7 +168,7 @@ function App() {
   };
 
   const handleCreateGame = () => {
-    socket.emit("add_game", nick);
+    socket.emit("create_game", nick);
   };
 
   const handleJoinGame = (gameId: string) => {
@@ -238,7 +245,7 @@ function App() {
   }
 
   const isMyTurn = gameState.players[gameState.turn.player_idx]?.nick === nick;
-  const validMoves = gameState.turn.validMoves.map((m) => m.toLowerCase());
+  const validMoves = gameState.turn.validMoves.map((m) => Action.toLowerCase(m));
   const currentPlayer = gameState.players.find((p) => p.nick === nick);
   const currentBalance = currentPlayer?.balance || 0;
 
