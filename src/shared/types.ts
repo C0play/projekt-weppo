@@ -1,44 +1,23 @@
-export interface Card {
-    rank: string;
-    suit: string;
-    point: number;
-}
 
-export interface Hand {
-    bet: number;
-    cards: Card[];
-    points: number;
-    is_insured: boolean
-    number_of_full_aces : number;
-}
+export enum Action { DRAW, STAND, DOUBLE, SPLIT, HIT, BET, INSURANCE }
 
-export interface Dealer {
-    cards: Card[];
-    points: number;
-    number_of_full_aces : number;
-}
-
-export interface Turn {
-    player_idx: number;
-    hand_idx: number;
-    timestamp: number;
-    validMoves : string[];
-}
-export enum PlayerState {"ACTIVE","INACTIVE","SPECTATING"}
-export interface Player {
-    nick: string;
-    hands: Hand[];
-    balance: number;
-    player_idx: number;
-    player_state : PlayerState
-}
-export enum GamePhase {"BETTING","PLAYING"}
-export interface GameState {
-    uuid: string;
-    number_of_players: number;
-    max_players: number;
-    turn: Turn;
-    players: Player[];
-    dealer: Dealer;
-    game_phase: GamePhase
+export namespace Action {
+    export function toLowerCase(action: Action): string {
+        switch (action) {
+            case Action.DRAW:
+                return "draw";
+            case Action.STAND:
+                return "stand";
+            case Action.DOUBLE:
+                return "double";
+            case Action.SPLIT:
+                return "split";
+            case Action.HIT:
+                return "hit";
+            case Action.BET:
+                return "bet";
+            case Action.INSURANCE:
+                return "insurance";
+        }
+    }
 }

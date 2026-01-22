@@ -1,6 +1,6 @@
 import { CSSProperties, useEffect, useState } from "react";
 import Card from "./Card";
-import { Player } from "../../shared/types";
+import { Player } from "../../game/types";
 
 interface PlayerSectionProps {
   player: Player;

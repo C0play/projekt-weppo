@@ -1,14 +1,20 @@
 import express from "express";
-import type { Request, Response } from "express";
 import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { randomUUID } from "node:crypto";
 import { Server, Socket } from "socket.io";
 
-import { Game, Player } from "./game";
+import { Room } from "./room";
+import { User } from "./user";
+import {
+  LoginRequest,
+  LoginResponse,
+  RoomRequest,
+  RoomsResponse
+} from "./types";
+import { logger } from "../shared/logger";
+import { Config } from "../shared/config";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+
 
 const app = express();
 const server = createServer(app);
@@ -19,136 +25,178 @@ const io = new Server(server, {
   }
 });
 
-let nicks = new Set<string>();
-let games = new Map<string, Game>(); // game_id -> Game
-let rooms = new Map<string, string>(); // nick -> game_id/room_name
+const sockets: Map<string, string> = new Map(); // socket_id -> nick
+const users: Map<string, User> = new Map(); // nick -> User
+const rooms: Map<string, Room> = new Map(); // room_id -> Room
 
-app.get("/", (_req: Request, res: Response) => {
-  res.sendFile(join(__dirname, "../../client", "index.html"));
-});
 
 io.on("connection", (socket: Socket) => {
-  console.log(socket.id);
+  logger.info(`Connection established with socket ${socket.id}`);
 
-  // Nick creation
-  socket.on("create_nick", (nick: string) => {
-    if (nicks.has(nick)) {
-      socket.emit("nick_status", { available: false, nick });
-    } else {
-      nicks.add(nick);
-      socket.emit("nick_status", { available: true, nick });
-    }
-  });
+  // Login / Register / Reconnect
+  socket.on("login", (data: LoginRequest) => {
 
-  socket.on("disconnect", (nick: string) => {
-    nicks.delete(nick);
-    rooms.delete(nick);
-    // delete player from games
-  });
+    const existingUser = users.get(data.nick);
+    if (existingUser) {
 
-  // Get games
-  socket.on("get_games", () => {
-    let game_ids: Array<string> = new Array();
-    games.forEach((game, id) => {
-      if (game.number_of_players < game.max_players) {
-        game_ids.push(id);
+      if (data.token !== null) {
+
+        if (existingUser.token === data.token) {
+          logger.info(`Restoring session of ${data.nick}`);
+
+          existingUser.socket = socket;
+          existingUser.socket_id = socket.id;
+          sockets.set(socket.id, data.nick);
+
+          if (existingUser.room_id) {
+            const room = rooms.get(existingUser.room_id);
+            if (room) {
+              logger.info(`Rejoining player ${existingUser.nick} to room ${existingUser.room_id}`);
+              room.handle_join(existingUser);
+            } else {
+              existingUser.room_id = null;
+            }
+          }
+
+          const res: LoginResponse = {
+            success: true,
+            nick: existingUser.nick,
+            token: existingUser.token,
+            restored: true,
+            msg: "User restored successfully",
+          };
+          socket.emit("login_response", res);
+
+        } else {
+          logger.warn(`Failed login attempt for ${data.nick} (token mismatch - ${data.token} : ${existingUser.token})`);
+          const res: LoginResponse = {
+            success: false,
+            msg: "Token mismatch.",
+          };
+          socket.emit("login_response", res);
+        }
+      } else {
+        const res: LoginResponse = {
+          success: false,
+          msg: "Nick is already taken by another player."
+        };
+        socket.emit("login_response", res);
       }
-    });
-    socket.emit("game_ids", game_ids);
+    } else {
+
+      const newUser = new User(socket, data.nick);
+      newUser.token = randomUUID();
+      users.set(data.nick, newUser);
+      sockets.set(socket.id, data.nick);
+
+      logger.info(`New user: ${data.nick}`);
+      const res: LoginResponse = {
+        success: true,
+        msg: "User registered successfully.",
+        nick: data.nick,
+        token: newUser.token,
+        restored: false
+      };
+      socket.emit("login_response", res);
+    }
   });
 
-  // Add game
-  socket.on("add_game", (nick: string) => {
-    let new_game: Game = new Game();
-    new_game.add_player(new Player(nick));
-
-    games.set(new_game.uuid, new_game);
-    rooms.set(nick, new_game.uuid);
-
-    socket.join(new_game.uuid);
-    socket.emit("game_added", new_game);
-  });
-
-  // Enter game
-  socket.on("join_game", (nick: string, game_id: string) => {
-    const game = games.get(game_id);
-    if (game === undefined) {
-      socket.emit("error", { msg: "no game with " + game_id + " found" });
+  socket.on("disconnect", (reason) => {
+    const nick = sockets.get(socket.id);
+    if (!nick) {
+      logger.error("User is not registered");
+      socket.emit("error", "User is not registered");
       return;
     }
-    // validate uniquee nick
 
-    console.debug("adding " + nick);
-    game.add_player(new Player(nick));
-    rooms.set(nick, game.uuid);
-
-    socket.join(game.uuid);
-    io.to(game.uuid).emit("game", game);
-
-  });
-
-  // Leave game
-  socket.on("leave_game", (nick: string, game_id: string) => {
-    const game = games.get(game_id);
-    if (game === undefined) {
-      socket.emit("error", { msg: "no game with " + game_id + " found" });
+    const user = users.get(nick);
+    if (!user) {
+      sockets.delete(socket.id);
+      logger.error(`User with ${socket.id} is not registered`);
+      socket.emit("error", `User with ${socket.id} is not registered`);
       return;
     }
-    // game.delete_player(nick)
 
-    rooms.delete(nick);
-
-    io.to(game.uuid).emit("game", game);
-  });
-
-  // ===== GAME MOVES =====
-  // Hit
-  socket.on("hit", (game_id: string) => {
-    console.log("hit");
-    const game = games.get(game_id);
-    if (game === undefined) {
-      socket.emit("error", { msg: "no game with " + game_id + " found" });
+    const room_id = user.room_id;
+    if (!room_id) {
+      logger.info(`Client disconnected: ${socket.id}, reason: ${reason}`);
       return;
     }
-    game.hit();
-    io.to(game.uuid).emit("game", game);
-  });
-  // Stand
-  socket.on("stand", (game_id: string) => {
-    console.log("stand");
-    const game = games.get(game_id);
-    if (game === undefined) {
-      socket.emit("error", { msg: "no game with " + game_id + " found" });
+
+    const room = rooms.get(room_id);
+    if (!room) {
+      logger.error("User's room does not exist");
+      socket.emit("error", "User's room does not exist");
       return;
     }
-    game.stand();
-    io.to(game.uuid).emit("game", game);
-  });
-  // Double
-  socket.on("double", (game_id: string) => {
-    console.log("double");
-    const game = games.get(game_id);
-    if (game === undefined) {
-      socket.emit("error", { msg: "no game with " + game_id + " found" });
-      return;
-    }
-    game.double();
-    io.to(game.uuid).emit("game", game);
-  });
-  // Split
-  socket.on("split", (game_id: string) => {
-    console.log("split");
-    const game = games.get(game_id);
-    if (game === undefined) {
-      socket.emit("error", { msg: "no game with " + game_id + " found" });
-      return;
-    }
-    game.split();
-    io.to(game.uuid).emit("game", game);
+
+    room.mark_as_inactive(user);
+    logger.info(`Client marked for removal: ${socket.id}, reason: ${reason}`);
   });
 
+  // Returns a list of room ids
+  socket.on("get_games", () => {
+
+    let res: RoomsResponse = {
+      id: []
+    };
+    for (const room of rooms.values()) {
+      res.id.push(room.id);
+    }
+    socket.emit("game_ids", res);
+  });
+
+  // Create a new room
+  socket.on("create_game", () => {
+
+    let nick = sockets.get(socket.id);
+    if (nick) {
+      let user = users.get(nick);
+      if (user) {
+        let new_room: Room = new Room(io);
+        logger.info(`Game ${new_room.id} created by ${nick}`);
+
+        new_room.handle_join(user);
+        rooms.set(new_room.id, new_room);
+        user.room_id = new_room.id;
+
+        socket.emit("game", new_room.game);
+      } else {
+        sockets.delete(socket.id);
+        socket.emit("error", `Internal error, please log in again.`);
+      }
+    } else {
+      socket.emit("error", `You are not registered (${socket.id})`);
+    }
+  });
+
+  // Join a room
+  socket.on("join_game", (room_info: RoomRequest) => {
+
+    let nick = sockets.get(socket.id);
+    if (nick) {
+      let user = users.get(nick);
+      if (user) {
+        const room = rooms.get(room_info.id);
+        if (room) {
+          room.handle_join(user);
+          user.room_id = room.id;
+          logger.info(`Player ${nick} joined game ${room_info.id}`);
+        } else {
+          socket.emit("error", `Requested game does not exist.`);
+        }
+      } else {
+        sockets.delete(socket.id);
+        socket.emit("error", `Internal error, please log in again.`);
+      }
+    } else {
+      socket.emit("error", `You are not registered (${socket.id})`);
+    }
+  });
 });
 
-server.listen(3000, "localhost", () => {
-  console.log("server running at ", server.address());
+
+
+server.listen(Config.SERVER_PORT, Config.SERVER_IP, () => {
+  logger.info(`server running at ${JSON.stringify(server.address())}`);
 });
