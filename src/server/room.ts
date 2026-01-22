@@ -3,6 +3,7 @@ import { Server } from "socket.io";
 import { User } from "./user";
 import { Action } from "../shared/types";
 import { Game } from "../game/game";
+import { GamePhase } from "../game/types";
 import { logger } from "../shared/logger";
 
 
@@ -11,7 +12,7 @@ export class Room {
     public game: Game; // TODO: set to private and add getter
     private io: Server;
 
-    private users: Map<string, User> = new Map();
+    private users: Map<string, User> = new Map(); // nick -> user
 
     private timeout: NodeJS.Timeout | null = null;
     private readonly TIME_LIMIT: number = 15e3; // 15 seconds
@@ -20,7 +21,7 @@ export class Room {
     constructor(io: Server) {
         this.id = crypto.randomUUID();
         this.io = io;
-        this.game = new Game(); // TODO: remove this from game and room (DONE)
+        this.game = new Game();
     }
 
     public handle_join(user: User) {
@@ -39,19 +40,42 @@ export class Room {
             logger.info(`Player ${user.nick} added to room ${this.id}`);
         }
 
-        logger.info(`Broadcasting game state. Moves: ${JSON.stringify(this.game.turn.validMoves)}`);
         user.socket.on("action", (action: Action, amount?: number) => {
             this.handle_action(user, action, amount);
         });
 
         this.io.to(this.id).emit("game", this.game);
-        if (this.users.size == 1) { // check if first player again or reuse var if scope allows
+        if (this.users.size == 1) {
             this.request_action();
         }
     }
 
     private request_action() {
+
         this.remove_inactive_users();
+
+        // ==================== BETTING ====================
+        if (this.game.game_phase === GamePhase.BETTING) {
+            logger.info(`Waiting for bets from all users.}`);
+            for (let user of this.users.values()) {
+                user.send(
+                    "your_turn",
+                    {
+                        allowedMoves: [Action.BET],
+                        time_left: this.TIME_LIMIT * 2,
+                    }
+                );
+            }
+            this.timeout = setTimeout(
+                () => {
+                    this.handle_betting_timeout();
+                },
+                this.TIME_LIMIT * 2
+            );
+            return;
+        }
+
+        // ==================== PLAYING ====================
         const current_user = this.users.get(this.game.get_current_player_nick());
         if (current_user) {
             const validMoves = this.game.turn.validMoves;
@@ -60,7 +84,7 @@ export class Room {
                 "your_turn",
                 {
                     allowedMoves: validMoves,
-                    time_left: this.TIME_LIMIT
+                    time_left: this.TIME_LIMIT,
                 }
             );
         } else {
@@ -73,7 +97,7 @@ export class Room {
             () => {
                 const current_nick = this.game.get_current_player_nick();
                 logger.warn(`User ${current_nick} did not respond, handling timeout`);
-                this.handle_timeout(current_user);
+                this.handle_playing_timeout(current_user);
             },
             this.TIME_LIMIT
         );
@@ -82,42 +106,37 @@ export class Room {
 
     private handle_action(user: User, action: Action, bet_amount?: number, insurance_decision?: boolean) {
 
-        const current_user = this.users.get(this.game.get_current_player_nick());
-        if (current_user) {
+        // =================================== BETTING ===================================
+        if (this.game.game_phase === GamePhase.BETTING && action === Action.BET) {
+            if (bet_amount === undefined) {
+                user.send("error", "Trying to bet without specifying the amount");
+                return;
+            }
+            if (!this.game.bet(bet_amount, user.nick)) {
+                user.send("error", `Trying to bet ${bet_amount} failed due to insufficient funds.`);
+                return;
+            }
+            logger.info(`Player ${user.nick} bet ${bet_amount} in room ${this.id}`);
+
+            // =================================== PLAYING ===================================
+        } else {
+            const current_user = this.users.get(this.game.get_current_player_nick());
+            if (!current_user) {
+                user.send("error", `Internal server error, no user was found for the current player.`);
+                return;
+            }
 
             if (user.socket_id !== current_user.socket_id) {
                 user.send("error", "It's not your turn");
                 return;
             }
 
-            if (action === Action.BET && !bet_amount) {
-                user.send("error", "Trying to bet without specifying the amount");
-                return;
-            }
-
-            if (action === Action.INSURANCE && !insurance_decision) {
-                user.send("error", "Trying to insure without specifying the decision");
-                return;
-            }
-
             if (!this.game.turn.validMoves.includes(action)) {
-                user.send("error", `You can not perform action ${action}`);
+                user.send("error", `You can not perform this action: ${action}`);
                 return;
             }
-
-            if (this.timeout) {
-                clearTimeout(this.timeout);
-                this.timeout = null;
-            }
-
-            logger.info(`Player ${user.nick} performed: ${action} in room ${this.id}`);
 
             switch (action) {
-                case Action.BET:
-                    if (bet_amount) {
-                        this.game.bet(bet_amount, user.nick);
-                    }
-                    break;
                 case Action.DOUBLE:
                     this.game.double();
                     break;
@@ -131,25 +150,53 @@ export class Room {
                     this.game.stand();
                     break;
                 case Action.INSURANCE:
-                    if (insurance_decision) {
-                        this.game.insurance(insurance_decision);
+                    if (insurance_decision === undefined) {
+                        user.send("error", "Trying to insure without specifying a decision");
+                        return;
                     }
+                    this.game.insurance(insurance_decision);
                     break;
                 default:
-                    logger.warn(`Invalid action received`);
-                    user.send("error", `Action (${action}) is not supported`);
+                    logger.warn(`Invalid action received: ${action}`);
+                    user.send("error", `Action (${action}) is can not be performed`);
+                    return;
             }
-            this.io.to(this.id).emit("game", this.game); // TODO: to be changed to bare minimum data
-            this.request_action();
-        } else {
-            user.send("error", `Internal error, no user was found for the current player.`);
+
+            logger.info(`Player ${user.nick} performed: ${action} in room ${this.id}`);
+            if (this.timeout) {
+                clearTimeout(this.timeout);
+                this.timeout = null;
+            }
         }
+        this.io.to(this.id).emit("game", this.game); // TODO: to be changed to bare minimum data
+        this.request_action();
     }
 
 
-    private handle_timeout(user: User) {
+    private handle_playing_timeout(user: User) {
         this.game.stand();
         this.mark_as_inactive(user);
+        this.request_action();
+
+        this.timeout = null;
+    }
+
+    private handle_betting_timeout() {
+
+        for (let nick of this.game.get_players_with_no_bet()) {
+            const user = this.users.get(nick);
+            if (!user) {
+                logger.error(
+                    `User ${nick} does not exist, but a player does in the game engine.`);
+                continue;
+            }
+            this.mark_as_inactive(user);
+        }
+
+        this.remove_inactive_users();
+        this.game.change_game_phase();
+        this.request_action();
+
         this.timeout = null;
     }
 
@@ -163,11 +210,15 @@ export class Room {
     public mark_as_active(user: User) {
         user.active = true;
         user.socket.join(this.id);
-        this.game.mark_as_active(user.nick); // TODO: to be modified in game.ts
+        this.game.mark_as_active(user.nick);
     }
 
     private remove_inactive_users() {
-        for (var nick of this.game.remove_inactive_players()) { // TODO: to be added in game.ts
+        if (this.game.game_phase === GamePhase.PLAYING) {
+            return;
+        }
+
+        for (let nick of this.game.remove_inactive_players()) {
             const user = this.users.get(nick);
             if (user) {
                 user.active = false;
