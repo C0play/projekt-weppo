@@ -1,11 +1,9 @@
 
-export enum Action { DRAW, STAND, DOUBLE, SPLIT, HIT, BET, INSURANCE }
+export enum Action {STAND, DOUBLE, SPLIT, HIT, BET, INSURANCE }
 
 export namespace Action {
     export function toLowerCase(action: Action): string {
         switch (action) {
-            case Action.DRAW:
-                return "draw";
             case Action.STAND:
                 return "stand";
             case Action.DOUBLE:
