@@ -8,8 +8,8 @@ import { logger } from "../shared/logger";
 
 
 export class Room {
-    public id: string;
-    public game: Game; // TODO: set to private and add getter
+    public readonly id: string;
+    public readonly game: Game; // TODO: set to private and add getter
     private io: Server;
 
     private users: Map<string, User> = new Map(); // nick -> user
@@ -20,11 +20,11 @@ export class Room {
 
     constructor(io: Server) {
         this.id = crypto.randomUUID();
-        this.io = io;
         this.game = new Game();
+        this.io = io;
     }
 
-    public handle_join(user: User) {
+    public handle_join(user: User): void {
 
         user.socket.removeAllListeners("action");
 
@@ -50,7 +50,7 @@ export class Room {
         }
     }
 
-    private request_action() {
+    private request_action(): void {
 
         this.remove_inactive_users();
 
@@ -104,7 +104,11 @@ export class Room {
 
     }
 
-    private handle_action(user: User, action: Action, bet_amount?: number, insurance_decision?: boolean) {
+    private handle_action(
+        user: User,
+        action: Action,
+        bet_amount?: number,
+        insurance_decision?: boolean): void {
 
         // =================================== BETTING ===================================
         if (this.game.game_phase === GamePhase.BETTING && action === Action.BET) {
@@ -173,7 +177,7 @@ export class Room {
     }
 
 
-    private handle_playing_timeout(user: User) {
+    private handle_playing_timeout(user: User): void {
         this.game.stand();
         this.mark_as_inactive(user);
         this.request_action();
@@ -181,7 +185,7 @@ export class Room {
         this.timeout = null;
     }
 
-    private handle_betting_timeout() {
+    private handle_betting_timeout(): void {
 
         for (let nick of this.game.get_players_with_no_bet()) {
             const user = this.users.get(nick);
@@ -200,20 +204,20 @@ export class Room {
         this.timeout = null;
     }
 
-    public mark_as_inactive(user: User) {
+    public mark_as_inactive(user: User): void {
         user.active = false;
         user.socket.leave(this.id);
         user.socket.removeListener("action", this.handle_action);
         this.game.mark_as_inactive(user.nick);
     }
 
-    public mark_as_active(user: User) {
+    private mark_as_active(user: User): void {
         user.active = true;
         user.socket.join(this.id);
         this.game.mark_as_active(user.nick);
     }
 
-    private remove_inactive_users() {
+    private remove_inactive_users(): void {
         if (this.game.game_phase === GamePhase.PLAYING) {
             return;
         }

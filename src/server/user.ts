@@ -17,7 +17,7 @@ export class User {
         this.nick = nick;
     }
 
-    send(event: string, data: any) {
+    send(event: string, data: any): void {
         this.socket.emit(event, data);
     }
 }
