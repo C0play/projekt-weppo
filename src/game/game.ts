@@ -73,22 +73,22 @@ export class Game {
     public players: Player[];
     public dealer: GameTypes.Dealer;
 
-    public uuid: string;
     public number_of_players: number;
     public max_players = 4;
     public turn = new Turn();
     public game_phase: GameTypes.GamePhase;
-
-    constructor(uuid: string) {
+    constructor() {
         this.deck = shuffle(createDecks(4));
         this.players = [];
         this.dealer = { cards: [], points: 0, number_of_full_aces: 0 };
         this.number_of_players = 0;
-        this.uuid = uuid;
         this.game_phase = GameTypes.GamePhase.BETTING;
     }
 
-    public mark_as_active(nick: string): boolean { // TODO: extend with reconnection logic
+
+    //============================PUBLIC METHODS===================================================================
+    public connect_player(nick: string): boolean { // TODO: extend with reconnection logic (DONE)
+        
         if (this.number_of_players + 1 > this.max_players) {
             return false;
         }
@@ -104,32 +104,140 @@ export class Game {
         this.number_of_players++;
         return true;
     }
-
-    public mark_as_inactive(nick: string): void {
-        let idx = 0;
-
-        for (let i = 0; i < this.players.length; i++) {
-            if (this.players[i].nick == nick) {
-                idx = i;
-                break;
+    public mark_as_active(nick:string ) //for reconnecting
+    {
+        for(let i=0;i<this.players.length;i++)
+        {
+            if(this.players[i].nick === nick)
+            {
+                this.players[i].player_state=GameTypes.PlayerState.ACTIVE;
+                return;
             }
         }
+    }
+    public mark_as_inactive(nick:string )
+    {
+        for(let i=0;i<this.players.length;i++)
+        {
+            if(this.players[i].nick === nick)
+            {
+                this.players[i].player_state=GameTypes.PlayerState.INACTIVE;
+                return;
+            }
+        }
+    }
+    public stand(): void {
+        this.next_turn();
+    }
 
+    public double(): void {
+        this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet *= 2;
+        this.draw_card();
+        this.next_turn();
+    }
+    public split(): void {
+        let nb_of_aces = 0;
+        let card = this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
+        
+        if (card) {
+            this.players[this.turn.player_idx].hands[this.turn.hand_idx].points = card.point;
+            if (card.rank === 'ace') {
+                nb_of_aces++;
+            }
+            let newHand: GameTypes.Hand =
+            {
+                bet: this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet,
+                cards: [card],
+                points: card.point,
+                number_of_full_aces: nb_of_aces,
+                is_insured: false
+            };
+            this.players[this.turn.player_idx].hands.push(newHand);
+        }
+        
+    }
+    public hit(): void {
+        this.draw_card();
+        if (this.is_bust()) {
+            this.next_turn();
+        }
+    }
+    public insurance(decision: boolean): void {
+        if (decision === true) {
+            this.players[this.turn.player_idx].balance -= Math.round(this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet / 2);
+            this.players[this.turn.player_idx].hands[this.turn.hand_idx].is_insured = true;
+        }
+        this.next_insurance_turn();
+        return;
+    }
+    public bet(bet_amount: number, nick: string): boolean {
+        for (let i = 0; i < this.players.length; i++) {
+            if (this.players[i].nick === nick) {
+                if (this.players[i].balance >= bet_amount) {
+                    this.players[i].balance -= bet_amount;
+                    this.players[i].hands[0].bet = bet_amount;
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
+        }
+        return false;
+    }
+    public change_game_phase(): void {
         if (this.game_phase === GameTypes.GamePhase.BETTING) {
-            this.delete_player(idx);
+            this.game_phase = GameTypes.GamePhase.PLAYING;
+            this.deal_cards();
             return;
         }
-        else {
-            this.players[idx].player_state = GameTypes.PlayerState.INACTIVE;
+        if (this.game_phase === GameTypes.GamePhase.PLAYING) {
+            this.game_phase = GameTypes.GamePhase.BETTING;
+            this.new_game();
             return;
         }
     }
+
+    public get_current_player_nick(): string {
+        return this.players[this.turn.player_idx].nick;
+    }
+
+    public remove_inactive_players(): string[] { //call before change_phase from betting to playing
+        let inactive_players = []
+        for(let i=0;i<this.players.length;i++)
+        {
+            if(this.players[i].player_state===GameTypes.PlayerState.INACTIVE)
+            {
+            inactive_players.push(this.players[i].nick) 
+              this.delete_player(i);
+              i--;
+            }
+        }
+        return inactive_players;
+    }
+    public get_players_with_no_bet(): string[] {
+        let no_bet_players = []
+        for(let i=0;i<this.players.length;i++)
+        {
+            if(this.players[i].hands[0].bet===0)
+            {
+                no_bet_players.push(this.players[i].nick);
+            }
+        }
+        return no_bet_players;
+    }
+    //================PRIVATE METHODS=============================================================================
     private delete_player(idx: number): void {
         this.players.splice(idx, 1);
+        this.number_of_players--;
+        
+        for (let i = 0; i < this.players.length; i++) {
+            this.players[i].player_idx = i;
+        }
     }
 
 
-    public draw_card(): void {
+    private draw_card(): void {
         let card = this.deck.pop();
         if (card) {
             if (card.rank === 'ace') {
@@ -154,7 +262,7 @@ export class Game {
         }
     }
 
-    public deal_cards(): void {
+    private deal_cards(): void {
         for (let i = 0; i < 2; i++) {
             for (let j = 0; j < this.number_of_players; j++) {
                 let card = this.deck.pop();
@@ -206,7 +314,7 @@ export class Game {
             this.turn.player_idx++;
         }
     }
-    public next_turn(): void {
+    private next_turn(): void {
         this.turn.timestamp = Date.now();
         if (this.players[this.turn.player_idx].hands.length === this.turn.hand_idx + 1) {
             if (this.players.length === this.turn.player_idx + 1) {
@@ -235,15 +343,6 @@ export class Game {
 
     }
 
-    public stand(): void {
-        this.next_turn();
-    }
-
-    public double(): void {
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet *= 2;
-        this.draw_card();
-        this.next_turn();
-    }
 
     private valid_moves(): Action[] {
         let validm = [Action.HIT, Action.STAND, Action.DOUBLE];
@@ -257,27 +356,6 @@ export class Game {
         return validm;
     }
 
-    public split(): void {
-        let nb_of_aces = 0;
-        let card = this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
-
-        if (card) {
-            this.players[this.turn.player_idx].hands[this.turn.hand_idx].points = card.point;
-            if (card.rank === 'ace') {
-                nb_of_aces++;
-            }
-            let newHand: GameTypes.Hand =
-            {
-                bet: this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet,
-                cards: [card],
-                points: card.point,
-                number_of_full_aces: nb_of_aces,
-                is_insured: false
-            };
-            this.players[this.turn.player_idx].hands.push(newHand);
-        }
-
-    }
 
     private is_bust(): boolean {
         if (this.players[this.turn.player_idx].hands[this.turn.hand_idx].points > 21) {
@@ -302,35 +380,6 @@ export class Game {
         return false;
     }
 
-    public hit(): void {
-        this.draw_card();
-        if (this.is_bust()) {
-            this.next_turn();
-        }
-    }
-    public insurance(decision: boolean): void {
-        if (decision === true) {
-            this.players[this.turn.player_idx].balance -= Math.round(this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet / 2);
-            this.players[this.turn.player_idx].hands[this.turn.hand_idx].is_insured = true;
-        }
-        this.next_insurance_turn();
-        return;
-    }
-    public bet(bet_amount: number, nick: string): boolean {
-        for (let i = 0; i < this.players.length; i++) {
-            if (this.players[i].nick === nick) {
-                if (this.players[i].balance >= bet_amount) {
-                    this.players[i].balance -= bet_amount;
-                    this.players[i].hands[0].bet = bet_amount;
-                    return true;
-                }
-                else {
-                    return false;
-                }
-            }
-        }
-        return false;
-    }
 
     private win(player_idx: number, hand_idx: number): void {
         this.players[player_idx].balance += 2 * this.players[player_idx].hands[hand_idx].bet;
@@ -397,14 +446,10 @@ export class Game {
             this.draw_dealer();
         }
         this.update_balances();
-        for (let i = 0; i < this.players.length; i++) {
-            if (this.players[i].player_state === GameTypes.PlayerState.INACTIVE) {
-                this.delete_player(i);
-            }
-        }
+        this.change_game_phase();
     }
 
-    public new_game(): void {
+    private new_game(): void {
         this.deck = shuffle(createDecks(4));
         for (let i = 0; i < this.players.length; i++) {
             if (this.players[i].player_state === GameTypes.PlayerState.SPECTATING) {
@@ -430,25 +475,4 @@ export class Game {
         this.turn.player_idx = 0;
     }
 
-    public change_game_phase(): void {
-        if (this.game_phase === GameTypes.GamePhase.BETTING) {
-            this.game_phase = GameTypes.GamePhase.PLAYING;
-            this.deal_cards();
-            return;
-        }
-        if (this.game_phase === GameTypes.GamePhase.PLAYING) {
-            this.game_phase = GameTypes.GamePhase.BETTING;
-            this.new_game();
-            return;
-        }
-    }
-
-    public get_current_player_nick(): string {
-        return this.players[this.turn.player_idx].nick;
-    }
-
-    public remove_inactive_players(): string[] {
-        // TODO: TBA (remove all inactive players before betting and return their nicknames)
-        return [];
-    }
 }

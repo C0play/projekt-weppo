@@ -36,7 +36,6 @@ export interface Player {
 }
 export enum GamePhase { "BETTING", "PLAYING" }
 export interface GameState {
-    uuid: string;
     number_of_players: number;
     max_players: number;
     turn: Turn;

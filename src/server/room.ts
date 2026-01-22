@@ -20,7 +20,7 @@ export class Room {
     constructor(io: Server) {
         this.id = crypto.randomUUID();
         this.io = io;
-        this.game = new Game(this.id); // TODO: remove this from game and room
+        this.game = new Game(); // TODO: remove this from game and room (DONE)
     }
 
     public handle_join(user: User) {
@@ -33,7 +33,7 @@ export class Room {
         } else {                                                            // connecting
             user.room_id = this.id;
             this.users.set(user.nick, user);
-            this.game.mark_as_active(user.nick);
+            this.game.connect_player(user.nick);
 
             user.socket.join(this.id);
             logger.info(`Player ${user.nick} added to room ${this.id}`);
@@ -118,9 +118,6 @@ export class Room {
                         this.game.bet(bet_amount, user.nick);
                     }
                     break;
-                case Action.DRAW:
-                    this.game.draw_card();
-                    break;
                 case Action.DOUBLE:
                     this.game.double();
                     break;
@@ -152,7 +149,6 @@ export class Room {
 
     private handle_timeout(user: User) {
         this.game.stand();
-        this.game.next_turn();
         this.mark_as_inactive(user);
         this.timeout = null;
     }
