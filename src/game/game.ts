@@ -215,7 +215,17 @@ export class Game {
         }
         return inactive_players;
     }
-
+    public get_players_with_no_bet(): string[] {
+        let no_bet_players = []
+        for(let i=0;i<this.players.length;i++)
+        {
+            if(this.players[i].hands[0].bet===0)
+            {
+                no_bet_players.push(this.players[i].nick);
+            }
+        }
+        return no_bet_players;
+    }
     //================PRIVATE METHODS=============================================================================
     private delete_player(idx: number): void {
         this.players.splice(idx, 1);
