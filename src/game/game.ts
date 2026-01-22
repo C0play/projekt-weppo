@@ -77,22 +77,16 @@ export class Game {
     public max_players = 4;
     public turn = new Turn();
     public game_phase: GameTypes.GamePhase;
-    public inactive_players : string[]
     constructor() {
         this.deck = shuffle(createDecks(4));
         this.players = [];
         this.dealer = { cards: [], points: 0, number_of_full_aces: 0 };
         this.number_of_players = 0;
         this.game_phase = GameTypes.GamePhase.BETTING;
-        this.inactive_players = []
     }
 
 
     //============================PUBLIC METHODS===================================================================
-    public get_game() 
-    {
-        return this;
-    }
     public connect_player(nick: string): boolean { // TODO: extend with reconnection logic (DONE)
         
         if (this.number_of_players + 1 > this.max_players) {
@@ -128,7 +122,6 @@ export class Game {
             if(this.players[i].nick === nick)
             {
                 this.players[i].player_state=GameTypes.PlayerState.INACTIVE;
-                this.inactive_players.push(nick);
                 return;
             }
         }
@@ -194,7 +187,6 @@ export class Game {
     }
     public change_game_phase(): void {
         if (this.game_phase === GameTypes.GamePhase.BETTING) {
-            this.inactive_players=[]
             this.game_phase = GameTypes.GamePhase.PLAYING;
             this.deal_cards();
             return;
@@ -211,15 +203,17 @@ export class Game {
     }
 
     public remove_inactive_players(): string[] { //call before change_phase from betting to playing
+        let inactive_players = []
         for(let i=0;i<this.players.length;i++)
         {
-            if(this.inactive_players.includes(this.players[i].nick))
+            if(this.players[i].player_state===GameTypes.PlayerState.INACTIVE)
             {
-              this.delete_player(i); 
+            inactive_players.push(this.players[i].nick) 
+              this.delete_player(i);
               i--;
             }
         }
-        return this.inactive_players;
+        return inactive_players;
     }
 
     //================PRIVATE METHODS=============================================================================
@@ -442,6 +436,7 @@ export class Game {
             this.draw_dealer();
         }
         this.update_balances();
+        this.change_game_phase();
     }
 
     private new_game(): void {
