@@ -269,61 +269,76 @@ export class Game {
       }
       let card = this.deck.pop();
 
-      if (card) {
-        if (card.rank === "ace") {
-          this.dealer.number_of_full_aces++;
+            if (card) {
+                if (card.rank === 'ace') {
+                    this.dealer.number_of_full_aces++;
+                }
+                this.dealer.cards.push(card);
+                this.dealer.points += card.point;
+                if (this.dealer.points === 22) {
+                    this.dealer.points = 12;
+                    this.dealer.number_of_full_aces--;
+                }
+            }
         }
-        this.dealer.cards.push(card);
-        this.dealer.points += card.point;
-        if (this.dealer.points === 22) {
-          this.dealer.points = 12;
-          this.dealer.number_of_full_aces--;
+        if (this.dealer.cards[0].rank === 'ace') {
+            this.turn.validMoves = [Action.INSURANCE];
+            return;
         }
-      }
-    }
-    if (this.dealer.cards[0].rank === "ace") {
-      this.turn.validMoves = [Action.INSURANCE];
-      return;
-    }
-    this.turn.validMoves = this.valid_moves();
-  }
-  private next_insurance_turn(): void {
-    if (this.turn.player_idx + 1 === this.players.length) {
-      this.turn = new Turn();
-      if (this.is_dealer_blackjack()) {
-        this.play_dealer();
-      } else {
+        else if(this.is_blackjack(0,0))
+        {
+            this.next_turn();
+        }
         this.turn.validMoves = this.valid_moves();
-      }
-    } else {
-      this.turn.player_idx++;
+
     }
-  }
-  private next_turn(): void {
-    this.turn.timestamp = Date.now();
-    if (this.players[this.turn.player_idx].hands.length === this.turn.hand_idx + 1) {
-      if (this.players.length === this.turn.player_idx + 1) {
-        this.turn.player_idx++;
-        this.play_dealer();
-        return;
-      } else {
-        this.turn.player_idx++;
-        this.turn.hand_idx = 0;
-      }
-    } else {
-      this.turn.hand_idx++;
+    private next_insurance_turn(): void {
+        if (this.turn.player_idx + 1 === this.players.length) {
+            this.turn = new Turn();
+            if (this.is_dealer_blackjack()) {
+                this.play_dealer();
+            }
+            else if(this.is_blackjack(0,0))
+            {
+                this.next_turn();
+            }
+            else {
+                this.turn.validMoves = this.valid_moves();
+            }
+        }
+        else {
+            this.turn.player_idx++;
+        }
     }
-    this.turn.validMoves = this.valid_moves();
-    if (this.players[this.turn.player_idx].player_state === GameTypes.PlayerState.INACTIVE) {
-      this.stand();
+    private next_turn(): void {
+        this.turn.timestamp = Date.now();
+        if (this.players[this.turn.player_idx].hands.length === this.turn.hand_idx + 1) {
+            if (this.players.length === this.turn.player_idx + 1) {
+                this.turn.player_idx++;
+                this.play_dealer();
+                return;
+            }
+            else {
+                this.turn.player_idx++;
+                this.turn.hand_idx = 0;
+            }
+        }
+        else {
+            this.turn.hand_idx++;
+        }
+        this.turn.validMoves = this.valid_moves();
+        if (this.players[this.turn.player_idx].player_state === GameTypes.PlayerState.INACTIVE) {
+            this.stand();
+        }
+        if (this.players[this.turn.player_idx].player_state === GameTypes.PlayerState.SPECTATING) {
+            this.next_turn();
+        }
+        if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
+            this.stand();
+        }
+
     }
-    if (this.players[this.turn.player_idx].player_state === GameTypes.PlayerState.SPECTATING) {
-      this.next_turn();
-    }
-    if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
-      this.stand();
-    }
-  }
+
 
   private valid_moves(): Action[] {
     let validm = [Action.HIT, Action.STAND, Action.DOUBLE];
@@ -346,15 +361,15 @@ export class Game {
     return false;
   }
 
-  private is_blackjack(player_idx: number, hand_idx: number): boolean {
-    if (
-      this.players[player_idx].hands[hand_idx].cards.length === 2 &&
-      this.players[player_idx].hands[hand_idx].points === 21
-    ) {
-      return true;
+    private is_blackjack(player_idx: number, hand_idx: number): boolean {
+        if (this.players[player_idx].hands[hand_idx].cards.length === 2 &&
+            this.players[player_idx].hands[hand_idx].points === 21
+        ) 
+        {
+            return true;
+        }
+        return false;
     }
-    return false;
-  }
 
   private is_dealer_blackjack(): boolean {
     if (this.dealer.cards.length === 2 && this.dealer.points === 21) {
@@ -427,28 +442,26 @@ export class Game {
     this.change_game_phase();
   }
 
-  private new_game(): void {
-    this.deck = shuffle(createDecks(4));
-    for (let i = 0; i < this.players.length; i++) {
-      if (this.players[i].player_state === GameTypes.PlayerState.SPECTATING) {
-        this.players[i].player_state = GameTypes.PlayerState.ACTIVE;
-      }
-      for (let j = 0; j < this.players[i].hands.length; j++) {
-        if (j === 0) {
-          this.players[i].hands[j].cards = [];
-          this.players[i].hands[j].points = 0;
-          this.players[i].hands[j].number_of_full_aces = 0;
-          this.players[i].hands[j].bet = 0;
-        } else {
-          this.players[i].hands.splice(j, this.players[i].hands.length - 2);
+    private new_game(): void {
+        this.deck = shuffle(createDecks(4));
+        for (let i = 0; i < this.players.length; i++) {
+            if (this.players[i].player_state === GameTypes.PlayerState.SPECTATING) {
+                this.players[i].player_state = GameTypes.PlayerState.ACTIVE;
+            }
+                    this.players[i].hands[0].cards = [];
+                    this.players[i].hands[0].points = 0;
+                    this.players[i].hands[0].number_of_full_aces = 0;
+                    this.players[i].hands[0].bet = 0;
+                
+        
+                    if (this.players[i].hands.length > 1) {
+                        this.players[i].hands.splice(1);
+                    }
         }
-      }
+        this.dealer.cards = [];
+        this.dealer.points = 0;
+        this.dealer.number_of_full_aces = 0;
+        this.turn = new Turn();
     }
-    this.dealer.cards = [];
-    this.dealer.points = 0;
-    this.dealer.number_of_full_aces = 0;
-    this.turn.hand_idx = 0;
-    this.turn.player_idx = 0;
-    this.turn.validMoves = [Action.BET];
-  }
+
 }
