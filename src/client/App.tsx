@@ -161,8 +161,11 @@ function App() {
       setView("game");
     };
     const handleYourTurn = (data: { allowedMoves: Action[]; time_left: number }) => {
-      console.log("It's my turn!", data);
-      setTimeLeft(Math.floor(data.time_left / 1000));
+      console.log("Your turn!", data);
+      // time_left is a deadline (timestamp), calculate remaining seconds
+      const remainingMs = data.time_left - Date.now();
+      const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
+      setTimeLeft(remainingSeconds);
     };
     const handleError = (err: string | { msg: string }) => {
       const msg = typeof err === "string" ? err : err.msg;

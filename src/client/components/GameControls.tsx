@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Socket } from "socket.io-client";
 import { GameState, GamePhase } from "../../game/types";
 import { Action } from "../../shared/types";
+import Timer from "./Timer";
 import "./GameControls.css";
 
 interface GameControlsProps {
@@ -32,9 +33,7 @@ export default function GameControls({ socket, gameState, nick, timeLeft }: Game
               ? "It's your turn!"
               : `Current turn: ${gameState.players[gameState.turn.player_idx]?.nick || "Unknown"}`}
         </h3>
-        {timeLeft !== null && (
-          <div className={`timer ${timeLeft < 5 ? "timer-urgent" : ""}`}>Time left: {timeLeft}s</div>
-        )}
+        <Timer timeLeft={timeLeft} totalTime={isBettingPhase ? 20 : 10} />
       </div>
 
       {showControls && (
