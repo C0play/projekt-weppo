@@ -54,6 +54,7 @@ io.on("connection", (socket: Socket) => {
               logger.info(`Rejoining player ${existingUser.nick} to room ${existingUser.room_id}`);
               room.handle_join(existingUser);
             } else {
+              logger.warn(`User ${existingUser.nick} had room_id ${existingUser.room_id} but room does not exist anymore`);
               existingUser.room_id = null;
             }
           }
@@ -134,7 +135,7 @@ io.on("connection", (socket: Socket) => {
 
   // Returns a list of room ids
   socket.on("get_games", () => {
-
+    logger.debug(`Socket ${socket.id} requested room list. Total rooms: ${rooms.size}`);
     let res: RoomsResponse = {
       id: []
     };
@@ -146,20 +147,21 @@ io.on("connection", (socket: Socket) => {
 
   // Create a new room
   socket.on("create_game", () => {
-
     let nick = sockets.get(socket.id);
     if (nick) {
       let user = users.get(nick);
       if (user) {
         let new_room: Room = new Room(io);
-        logger.info(`Game ${new_room.id} created by ${nick}`);
+        logger.info(`New room created! ID: ${new_room.id} Owner: ${nick}`);
 
         new_room.handle_join(user);
         rooms.set(new_room.id, new_room);
         user.room_id = new_room.id;
 
+        logger.info(`Total active rooms now: ${rooms.size}`);
         socket.emit("game", new_room.game);
       } else {
+        logger.error(`Create failed: User nick ${nick} found but no User object for socket ${socket.id}`);
         sockets.delete(socket.id);
         socket.emit("error", `Internal error, please log in again.`);
       }
@@ -170,48 +172,52 @@ io.on("connection", (socket: Socket) => {
 
   // Join a room
   socket.on("join_game", (room_info: RoomRequest) => {
-
     let nick = sockets.get(socket.id);
     if (nick) {
       let user = users.get(nick);
       if (user) {
         const room = rooms.get(room_info.id);
         if (room) {
+          logger.info(`Player ${nick} joining room ${room_info.id}`);
           room.handle_join(user);
           user.room_id = room.id;
-          logger.info(`Player ${nick} joined game ${room_info.id}`);
         } else {
+          logger.warn(`Join failed: Room ${room_info.id} not found for user ${nick}`);
           socket.emit("error", `Requested game does not exist.`);
         }
       } else {
+        logger.error(`Join failed: User object missing for nick ${nick}`);
         sockets.delete(socket.id);
         socket.emit("error", `Internal error, please log in again.`);
       }
     } else {
+      logger.warn(`Join failed: Socket ${socket.id} not registered`);
       socket.emit("error", `You are not registered (${socket.id})`);
     }
   });
 
   // Leave a room
   socket.on("leave_game", (room_info: RoomRequest) => {
-
     let nick = sockets.get(socket.id);
     if (nick) {
       let user = users.get(nick);
       if (user) {
         const room = rooms.get(room_info.id);
         if (room) {
+          logger.info(`Player ${nick} requested to leave room ${room_info.id}`);
           room.mark_as_inactive(user, "left");
-          user.room_id = room.id;
-          logger.info(`Player ${nick} left game ${room_info.id}`);
+          user.room_id = null;
         } else {
+          logger.warn(`Leave failed: Room ${room_info.id} not found for user ${nick}`);
           socket.emit("error", `Requested game does not exist.`);
         }
       } else {
+        logger.error(`Leave failed: User object missing for nick ${nick}`);
         sockets.delete(socket.id);
         socket.emit("error", `Internal error, please log in again.`);
       }
     } else {
+      logger.warn(`Leave failed: Socket ${socket.id} not registered`);
       socket.emit("error", `You are not registered (${socket.id})`);
     }
   });

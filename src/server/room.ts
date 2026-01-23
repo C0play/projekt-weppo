@@ -30,15 +30,15 @@ export class Room {
         user.socket.removeAllListeners("action");
 
         if (this.users.has(user.nick)) {                                    // reconnecting
+            logger.info(`Player ${user.nick} re-connected to room ${this.id}`);
             this.mark_as_active(user);
-            logger.info(`Player ${user.nick} added to room ${this.id}`);
         } else {                                                            // connecting
             user.room_id = this.id;
             this.users.set(user.nick, user);
             this.game.connect_player(user.nick);
 
             user.socket.join(this.id);
-            logger.info(`Player ${user.nick} added to room ${this.id}`);
+            logger.info(`Player ${user.nick} joined room ${this.id} for the first time`);
         }
 
         user.socket.on("action", (action: Action, amount?: number) => {
@@ -54,19 +54,21 @@ export class Room {
     private request_action(): void {
 
         this.remove_inactive_users();
+        logger.debug(`Requesting action in room ${this.id}. Current phase: ${this.game.game_phase}`);
 
         // ==================== BETTING ====================
         if (this.game.game_phase === GamePhase.BETTING) {
-            logger.info(`Waiting for bets from all users.`);
+            logger.info(`Phase: BETTING. Waiting for bets from ${this.users.size} users.`);
             for (let user of this.users.values()) {
                 const resp: BetRequest = {
                     allowedMoves: [Action.BET],
                     time_left: Date.now() + this.TIME_LIMIT * 2,
                 };
                 user.send("your_turn", resp);
+                logger.debug(`Sent bet request to ${user.nick}`);
             }
 
-            logger.debug(`Setting betting timeout`);
+            logger.debug(`Setting betting timeout for ${this.TIME_LIMIT * 2}ms`);
             this.timeout = setTimeout(
                 () => {
                     this.handle_betting_timeout();
@@ -78,14 +80,13 @@ export class Room {
         }
 
         // ==================== PLAYING ====================
-        const current_user = this.users.get(this.game.get_current_player_nick());
+        const current_player_nick = this.game.get_current_player_nick();
+        const current_user = this.users.get(current_player_nick);
         if (current_user) {
             const validMoves = this.game.turn.validMoves;
-            let validNames: string[] = [];
-            validMoves.forEach((move) => {
-                validNames.push(Action.toLowerCase(move));
-            });
-            logger.info(`Waiting for response [${validNames}] from ${current_user.nick}`);
+            let validNames = validMoves.map((move) => Action.toLowerCase(move));
+
+            logger.info(`Phase: PLAYING. Waiting for ${validNames} from ${current_user.nick} (current_player_idx: ${this.game.turn.player_idx})`);
             const resp: BetRequest = {
                 allowedMoves: validMoves,
                 time_left: Date.now() + this.TIME_LIMIT,
@@ -95,15 +96,15 @@ export class Room {
 
             this.timeout = setTimeout(
                 () => {
-                    logger.warn(`User ${current_user.nick} did not respond, handling timeout`);
+                    logger.warn(`User ${current_user.nick} did not respond within ${this.TIME_LIMIT}ms, triggering playing timeout`);
                     this.handle_playing_timeout(current_user);
                 },
                 this.TIME_LIMIT
             );
-            logger.debug(`Setting playing timeout ${this.timeout} for ${current_user.nick}`);
+            logger.debug(`Set playing timeout (id: ${this.timeout}) for ${current_user.nick}`);
 
         } else {
-            logger.error(`Failed to get current user in room ${this.id}`);
+            logger.error(`Critical Error: Nick '${current_player_nick}' is the current player in Game engine, but no User object exists in Room ${this.id}`);
             // ?
             return;
         }
@@ -118,18 +119,20 @@ export class Room {
         // =================================== BETTING ===================================
         if (this.game.game_phase === GamePhase.BETTING && action === Action.BET) {
             if (bet_amount === undefined) {
+                logger.warn(`Player ${user.nick} tried to bet without amount`);
                 user.send("error", "Trying to bet without specifying the amount");
                 return;
             }
 
             logger.info(`Current bet for ${user.nick} is ${this.game.get_player_bet(user.nick)}`);
             if (this.game.get_player_bet(user.nick) !== 0) {
-                logger.info(`Player ${user.nick} tried betting multile times`);
+                logger.warn(`Player ${user.nick} tried betting multile times (already bet ${this.game.get_player_bet(user.nick)})`);
                 user.send("error", `Trying to bet multiple times.`);
                 return;
             }
 
             if (!this.game.bet(bet_amount, user.nick)) {
+                logger.warn(`Player ${user.nick} bet ${bet_amount} failed (insufficient balance)`);
                 user.send("error", `Trying to bet ${bet_amount} failed due to insufficient funds.`);
                 return;
             }
@@ -144,21 +147,24 @@ export class Room {
         } else if (this.game.game_phase === GamePhase.PLAYING) {
             const current_user = this.users.get(this.game.get_current_player_nick());
             if (!current_user) {
+                logger.error(`Logic error: No user object found for current player nick: ${this.game.get_current_player_nick()}`);
                 user.send("error", `Internal server error, no user was found for the current player.`);
                 return;
             }
 
             if (user.socket_id !== current_user.socket_id) {
+                logger.warn(`Player ${user.nick} tried to act out of turn (it's ${current_user.nick}'s turn)`);
                 user.send("error", "It's not your turn");
                 return;
             }
 
             if (!this.game.turn.validMoves.includes(action)) {
+                logger.warn(`Player ${user.nick} tried invalid action: ${Action.toLowerCase(action)} (valid: [${this.game.turn.validMoves.map(m => Action.toLowerCase(m))}])`);
                 user.send("error", `You can not perform this action: ${action}`);
                 return;
             }
 
-            logger.info(`Received response [${Action.toLowerCase(action)}] from ${user.nick}`);
+            logger.info(`Processing action [${Action.toLowerCase(action)}] for player ${user.nick}`);
             switch (action) {
                 case Action.DOUBLE:
                     this.game.double();
@@ -174,20 +180,21 @@ export class Room {
                     break;
                 case Action.INSURANCE:
                     if (insurance_decision === undefined) {
+                        logger.warn(`Player ${user.nick} tried INSURANCE but decision was undefined`);
                         user.send("error", "Trying to insure without specifying a decision");
                         return;
                     }
                     this.game.insurance(insurance_decision);
                     break;
                 default:
-                    logger.warn(`Invalid action received: ${action}`);
+                    logger.error(`Logic Error: Action ${action} reached switch but is not explicitly handled`);
                     user.send("error", `Action (${action}) is can not be performed`);
                     return;
             }
 
-            logger.info(`Player ${user.nick} performed: ${Action.toLowerCase(action)} in room ${this.id}`);
+            logger.info(`Successfully completed action ${Action.toLowerCase(action)} for ${user.nick}`);
             if (this.timeout !== null) {
-                logger.debug(`Clearing timeout ${this.timeout}`);
+                logger.debug(`Clearing timeout ${this.timeout} for ${user.nick} after successful action`);
                 clearTimeout(this.timeout);
                 this.timeout = null;
             } else {
@@ -233,6 +240,7 @@ export class Room {
     }
 
     public mark_as_inactive(user: User, reason: string): void {
+        logger.info(`Marking player ${user.nick} as inactive in room ${this.id}. Reason: ${reason}`);
         user.active = false;
         user.socket.leave(this.id);
         user.socket.removeListener("action", this.handle_action);
@@ -245,6 +253,7 @@ export class Room {
     }
 
     private mark_as_active(user: User): void {
+        logger.info(`Marking player ${user.nick} as active in room ${this.id}`);
         user.active = true;
         user.socket.join(this.id);
         this.game.mark_as_active(user.nick);
@@ -252,6 +261,7 @@ export class Room {
 
     private remove_inactive_users(): void {
         if (this.game.game_phase === GamePhase.PLAYING) {
+            logger.debug(`Skipping removal of inactive users during PLAYING phase in room ${this.id}`);
             return;
         }
 
@@ -266,15 +276,16 @@ export class Room {
                     room_id: this.id,
                 };
                 user.send("kick", msg);
-
+                logger.info(`Notified and removed user ${nick} from room ${this.id}`);
+            } else {
+                logger.warn(`Player ${nick} removed from game engine, but no user object found in room ${this.id}`);
             }
             this.users.delete(nick);
-            logger.info(`Removed inactive user ${nick} from room ${this.id}`);
+            logger.info(`Cleaned up user ${nick} from room ${this.id} users map`);
         }
     }
 
     public destroy() {
         if (this.timeout) clearTimeout(this.timeout);
     }
-
 }
