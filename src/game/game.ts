@@ -144,7 +144,9 @@ export class Game {
         is_insured: false,
       };
       this.players[this.turn.player_idx].hands.push(newHand);
+      this.draw_card();
     }
+    this.turn.validMoves=this.valid_moves();
   }
   public hit(): void {
     this.draw_card();
@@ -325,6 +327,10 @@ export class Game {
         }
         else {
             this.turn.hand_idx++;
+            if(this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.length===1)
+            {
+                this.draw_card();
+            }
         }
         this.turn.validMoves = this.valid_moves();
         if (this.players[this.turn.player_idx].player_state === GameTypes.PlayerState.INACTIVE) {
