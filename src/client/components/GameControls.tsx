@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Socket } from "socket.io-client";
 import { GameState, GamePhase } from "../../game/types";
 import { Action } from "../../shared/types";
@@ -78,7 +78,6 @@ export default function GameControls({ socket, gameState, nick, timeLeft }: Game
               >
                 SPLIT
               </button>
-              {/* Added Logic for missing Insurance button (from previous analysis) */}
               {validMoves.includes("insurance") && (
                 <button
                   onClick={() => socket.emit("action", Action.INSURANCE, undefined, true)}

@@ -120,8 +120,7 @@ const mockGameState: SharedGameState = {
 function App() {
   const [view, setView] = useState<"login" | "lobby" | "game">("login");
   const [nick, setNick] = useState("");
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [token, setToken] = useState<string | null>(null);
+  const [_, setToken] = useState<string | null>(null);
   const [gameIds, setGameIds] = useState<string[]>([]);
   const [gameState, setGameState] = useState<SharedGameState | null>(null);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);

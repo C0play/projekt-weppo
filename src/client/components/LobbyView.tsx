@@ -1,4 +1,3 @@
-import { RoomsResponse } from "../../server/types";
 import "./LobbyView.css";
 
 interface LobbyViewProps {
