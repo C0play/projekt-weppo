@@ -1,6 +1,7 @@
 import { CSSProperties, useEffect, useState } from "react";
 import Card from "./Card";
 import { Player } from "../../game/types";
+import "./PlayerSection.css";
 
 interface PlayerSectionProps {
   player: Player;
