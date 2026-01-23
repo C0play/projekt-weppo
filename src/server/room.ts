@@ -61,7 +61,7 @@ export class Room {
             for (let user of this.users.values()) {
                 const resp: BetRequest = {
                     allowedMoves: [Action.BET],
-                    time_left: this.TIME_LIMIT * 2,
+                    time_left: Date.now() + this.TIME_LIMIT * 2,
                 };
                 user.send("your_turn", resp);
             }
@@ -87,7 +87,7 @@ export class Room {
             logger.info(`Waiting for response [${validNames}] from ${current_user.nick}`);
             const resp: BetRequest = {
                 allowedMoves: validMoves,
-                time_left: this.TIME_LIMIT,
+                time_left: Date.now() + this.TIME_LIMIT,
             };
             this.io.to(this.id).emit("game", this.game);
             current_user.send("your_turn", resp);

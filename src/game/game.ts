@@ -217,6 +217,16 @@ export class Game {
     }
     return no_bet_players;
   }
+  
+  public get_player_bet(nick: string): number {
+    for (let i = 0; i < this.players.length; i++) {
+      if (this.players[i].nick === nick) {
+        return this.players[i].hands[0].bet;
+      }
+    }
+    return -1;
+  }
+
   //================PRIVATE METHODS=============================================================================
   private delete_player(idx: number): void {
     this.players.splice(idx, 1);
