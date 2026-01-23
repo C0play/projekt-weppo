@@ -65,7 +65,7 @@ export class Room {
                 };
                 user.send("your_turn", resp);
             }
-            
+
             logger.debug(`Setting betting timeout`);
             this.timeout = setTimeout(
                 () => {
@@ -237,7 +237,8 @@ export class Room {
         user.socket.leave(this.id);
         user.socket.removeListener("action", this.handle_action);
         const msg: KickMessage = {
-            reason: reason
+            reason: reason,
+            room_id: this.id,
         };
         user.send("kick", msg);
         this.game.mark_as_inactive(user.nick);
@@ -260,6 +261,12 @@ export class Room {
                 user.active = false;
                 user.room_id = null;
                 user.socket.leave(this.id);
+                const msg: KickMessage = {
+                    reason: "removed",
+                    room_id: this.id,
+                };
+                user.send("kick", msg);
+
             }
             this.users.delete(nick);
             logger.info(`Removed inactive user ${nick} from room ${this.id}`);

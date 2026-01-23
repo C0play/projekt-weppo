@@ -28,5 +28,6 @@ export interface BetRequest {
 }
 
 export interface KickMessage {
-    reason: string
+    reason: string,
+    room_id: string;
 }
