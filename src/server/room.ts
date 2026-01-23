@@ -16,7 +16,7 @@ export class Room {
     private users: Map<string, User> = new Map(); // nick -> user
 
     private timeout: NodeJS.Timeout | null = null;
-    private readonly TIME_LIMIT: number = 15e3; // 15 seconds
+    private readonly TIME_LIMIT: number = 10e3; // miliseconds
 
 
     constructor(io: Server) {
@@ -65,6 +65,7 @@ export class Room {
                 };
                 user.send("your_turn", resp);
             }
+            logger.debug(`Setting betting timeout`);
             this.timeout = setTimeout(
                 () => {
                     this.handle_betting_timeout();
@@ -79,28 +80,32 @@ export class Room {
         const current_user = this.users.get(this.game.get_current_player_nick());
         if (current_user) {
             const validMoves = this.game.turn.validMoves;
-            logger.info(`Waiting for response [${validMoves.keys()}] from ${current_user.nick}`);
+            let validNames: string[] = [];
+            validMoves.forEach((move) => {
+                validNames.push(Action.toLowerCase(move));
+            });
+            logger.info(`Waiting for response [${validNames}] from ${current_user.nick}`);
             const resp: BetRequest = {
                 allowedMoves: validMoves,
                 time_left: this.TIME_LIMIT,
             };
             this.io.to(this.id).emit("game", this.game);
             current_user.send("your_turn", resp);
+
+            this.timeout = setTimeout(
+                () => {
+                    logger.warn(`User ${current_user.nick} did not respond, handling timeout`);
+                    this.handle_playing_timeout(current_user);
+                },
+                this.TIME_LIMIT
+            );
+            logger.debug(`Setting playing timeout ${this.timeout} for ${current_user.nick}`);
+
         } else {
             logger.error(`Failed to get current user in room ${this.id}`);
             // ?
             return;
         }
-
-        this.timeout = setTimeout(
-            () => {
-                const current_nick = this.game.get_current_player_nick();
-                logger.warn(`User ${current_nick} did not respond, handling timeout`);
-                this.handle_playing_timeout(current_user);
-            },
-            this.TIME_LIMIT
-        );
-
     }
 
     private handle_action(
@@ -122,7 +127,7 @@ export class Room {
             logger.info(`Player ${user.nick} bet ${bet_amount} in room ${this.id}`);
 
             // =================================== PLAYING ===================================
-        } else {
+        } else if (this.game.game_phase === GamePhase.PLAYING) {
             const current_user = this.users.get(this.game.get_current_player_nick());
             if (!current_user) {
                 user.send("error", `Internal server error, no user was found for the current player.`);
@@ -139,6 +144,7 @@ export class Room {
                 return;
             }
 
+            logger.info(`Received response [${Action.toLowerCase(action)}] from ${user.nick}`);
             switch (action) {
                 case Action.DOUBLE:
                     this.game.double();
@@ -165,11 +171,13 @@ export class Room {
                     return;
             }
 
-            logger.info(`Player ${user.nick} performed: ${action} in room ${this.id}`);
-            if (this.timeout) {
-                logger.debug(`Clearing timeout ${this.timeout}`)
+            logger.info(`Player ${user.nick} performed: ${Action.toLowerCase(action)} in room ${this.id}`);
+            if (this.timeout !== null) {
+                logger.debug(`Clearing timeout ${this.timeout}`);
                 clearTimeout(this.timeout);
                 this.timeout = null;
+            } else {
+                logger.error(`Timeout for ${this.timeout}`);
             }
             this.request_action();
         }
@@ -178,14 +186,17 @@ export class Room {
 
 
     private handle_playing_timeout(user: User): void {
+        logger.debug(`Timeout ${this.timeout} expired for user ${user.nick}`);
+        this.timeout = null;
+
         this.game.stand();
         this.mark_as_inactive(user);
         this.request_action();
-
-        this.timeout = null;
     }
 
     private handle_betting_timeout(): void {
+        logger.debug(`Beting timeout expired, proceeding to playing.`);
+        this.timeout = null;
 
         for (let nick of this.game.get_players_with_no_bet()) {
             const user = this.users.get(nick);
@@ -200,8 +211,6 @@ export class Room {
         this.remove_inactive_users();
         this.game.change_game_phase();
         this.request_action();
-
-        this.timeout = null;
     }
 
     public mark_as_inactive(user: User): void {
