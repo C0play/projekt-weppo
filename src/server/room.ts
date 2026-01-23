@@ -5,6 +5,7 @@ import { Action } from "../shared/types";
 import { Game } from "../game/game";
 import { GamePhase } from "../game/types";
 import { logger } from "../shared/logger";
+import { BetRequest } from "./types";
 
 
 export class Room {
@@ -56,15 +57,13 @@ export class Room {
 
         // ==================== BETTING ====================
         if (this.game.game_phase === GamePhase.BETTING) {
-            logger.info(`Waiting for bets from all users.}`);
+            logger.info(`Waiting for bets from all users.`);
             for (let user of this.users.values()) {
-                user.send(
-                    "your_turn",
-                    {
-                        allowedMoves: [Action.BET],
-                        time_left: this.TIME_LIMIT * 2,
-                    }
-                );
+                const resp: BetRequest = {
+                    allowedMoves: [Action.BET],
+                    time_left: this.TIME_LIMIT * 2,
+                };
+                user.send("your_turn", resp);
             }
             this.timeout = setTimeout(
                 () => {
@@ -72,6 +71,7 @@ export class Room {
                 },
                 this.TIME_LIMIT * 2
             );
+            this.io.to(this.id).emit("game", this.game);
             return;
         }
 
@@ -79,14 +79,13 @@ export class Room {
         const current_user = this.users.get(this.game.get_current_player_nick());
         if (current_user) {
             const validMoves = this.game.turn.validMoves;
-            logger.info(`Waiting for response [${validMoves}] from ${current_user.nick}`);
-            current_user.send(
-                "your_turn",
-                {
-                    allowedMoves: validMoves,
-                    time_left: this.TIME_LIMIT,
-                }
-            );
+            logger.info(`Waiting for response [${validMoves.keys()}] from ${current_user.nick}`);
+            const resp: BetRequest = {
+                allowedMoves: validMoves,
+                time_left: this.TIME_LIMIT,
+            };
+            this.io.to(this.id).emit("game", this.game);
+            current_user.send("your_turn", resp);
         } else {
             logger.error(`Failed to get current user in room ${this.id}`);
             // ?
@@ -168,12 +167,13 @@ export class Room {
 
             logger.info(`Player ${user.nick} performed: ${action} in room ${this.id}`);
             if (this.timeout) {
+                logger.debug(`Clearing timeout ${this.timeout}`)
                 clearTimeout(this.timeout);
                 this.timeout = null;
             }
+            this.request_action();
         }
         this.io.to(this.id).emit("game", this.game); // TODO: to be changed to bare minimum data
-        this.request_action();
     }
 
 

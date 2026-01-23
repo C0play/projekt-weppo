@@ -1,5 +1,5 @@
 
-export enum Action {STAND, DOUBLE, SPLIT, HIT, BET, INSURANCE }
+export enum Action { STAND, DOUBLE, SPLIT, HIT, BET, INSURANCE }
 
 export namespace Action {
     export function toLowerCase(action: Action): string {
