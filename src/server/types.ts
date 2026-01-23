@@ -27,3 +27,6 @@ export interface BetRequest {
     time_left: number;
 }
 
+export interface KickMessage {
+    reason: string
+}

@@ -4,7 +4,7 @@ import { Socket } from "socket.io";
 export class User {
     public socket: Socket;
     public socket_id: string;
-    public token: string;
+    public token: string = "";
     public nick: string;
 
     public room_id: string | null = null;
@@ -13,7 +13,6 @@ export class User {
     constructor(socket: Socket, nick: string) {
         this.socket = socket;
         this.socket_id = socket.id;
-        this.token = socket.id;
         this.nick = nick;
     }
 

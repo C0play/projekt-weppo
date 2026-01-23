@@ -5,7 +5,7 @@ import { Action } from "../shared/types";
 import { Game } from "../game/game";
 import { GamePhase } from "../game/types";
 import { logger } from "../shared/logger";
-import { BetRequest } from "./types";
+import { BetRequest, KickMessage } from "./types";
 
 
 export class Room {
@@ -65,6 +65,7 @@ export class Room {
                 };
                 user.send("your_turn", resp);
             }
+            
             logger.debug(`Setting betting timeout`);
             this.timeout = setTimeout(
                 () => {
@@ -120,11 +121,24 @@ export class Room {
                 user.send("error", "Trying to bet without specifying the amount");
                 return;
             }
+
+            logger.info(`Current bet for ${user.nick} is ${this.game.get_player_bet(user.nick)}`);
+            if (this.game.get_player_bet(user.nick) !== 0) {
+                logger.info(`Player ${user.nick} tried betting multile times`);
+                user.send("error", `Trying to bet multiple times.`);
+                return;
+            }
+
             if (!this.game.bet(bet_amount, user.nick)) {
                 user.send("error", `Trying to bet ${bet_amount} failed due to insufficient funds.`);
                 return;
             }
+
             logger.info(`Player ${user.nick} bet ${bet_amount} in room ${this.id}`);
+
+            if (this.game.get_players_with_no_bet().length === 0) {
+                this.handle_betting_timeout();
+            }
 
             // =================================== PLAYING ===================================
         } else if (this.game.game_phase === GamePhase.PLAYING) {
@@ -190,12 +204,17 @@ export class Room {
         this.timeout = null;
 
         this.game.stand();
-        this.mark_as_inactive(user);
+        this.mark_as_inactive(user, "timed out");
         this.request_action();
     }
 
     private handle_betting_timeout(): void {
-        logger.debug(`Beting timeout expired, proceeding to playing.`);
+        if (this.timeout !== null) {
+            logger.debug(`All players made bets, clearing betting timeout`);
+            clearTimeout(this.timeout);
+        } else {
+            logger.debug(`Beting timeout expired, proceeding to playing.`);
+        }
         this.timeout = null;
 
         for (let nick of this.game.get_players_with_no_bet()) {
@@ -205,7 +224,7 @@ export class Room {
                     `User ${nick} does not exist, but a player does in the game engine.`);
                 continue;
             }
-            this.mark_as_inactive(user);
+            this.mark_as_inactive(user, "timed out");
         }
 
         this.remove_inactive_users();
@@ -213,10 +232,14 @@ export class Room {
         this.request_action();
     }
 
-    public mark_as_inactive(user: User): void {
+    public mark_as_inactive(user: User, reason: string): void {
         user.active = false;
         user.socket.leave(this.id);
         user.socket.removeListener("action", this.handle_action);
+        const msg: KickMessage = {
+            reason: reason
+        };
+        user.send("kick", msg);
         this.game.mark_as_inactive(user.nick);
     }
 
