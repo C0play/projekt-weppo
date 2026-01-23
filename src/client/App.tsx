@@ -8,21 +8,9 @@ import PlayerSection from "./components/PlayerSection";
 import { GameState as SharedGameState, PlayerState, GamePhase } from "../game/types";
 import { Action } from "../shared/types";
 import { Config } from "../shared/config";
+import { LoginRequest, LoginResponse, RoomRequest, RoomsResponse } from "../server/types";
 
 const socket: Socket = io("http://" + Config.CLIENT_IP + ":" + Config.CLIENT_PORT, { autoConnect: false });
-
-interface LoginRequest {
-  nick: string;
-  token: string | null;
-}
-
-interface LoginResponse {
-  success: boolean;
-  msg: string;
-  nick?: string;
-  token?: string;
-  restored?: boolean;
-}
 
 // MOCK DATA FOR TESTING WITHOUT SERVER
 const mockGameState: SharedGameState = {
@@ -161,14 +149,14 @@ function App() {
       }
     });
 
-    socket.on("game_ids", (data: { id: string[] }) => {
+    socket.on("game_ids", (data: RoomsResponse) => {
       if (data && "id" in data) setGameIds(data.id);
     });
 
-    socket.on("game_added", (game: SharedGameState) => {
+    /*  socket.on("game_added", (game: SharedGameState) => {
       setGameState(game);
       setView("game");
-    });
+    }); */
 
     socket.on("game", (game: SharedGameState) => {
       setGameState(game);
@@ -225,7 +213,8 @@ function App() {
   };
 
   const handleJoinGame = (gameId: string) => {
-    socket.emit("join_game", { id: gameId });
+    const req: RoomRequest = { id: gameId };
+    socket.emit("join_game", req);
   };
 
   // Helper to position players in an arc
