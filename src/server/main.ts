@@ -6,10 +6,8 @@ import { Server, Socket } from "socket.io";
 import { Room } from "./room";
 import { User } from "./user";
 import {
-  LoginRequest,
-  LoginResponse,
-  RoomRequest,
-  RoomsResponse
+  LoginRequest, LoginResponse,
+  RoomRequest, RoomsResponse
 } from "./types";
 import { logger } from "../shared/logger";
 import { Config } from "../shared/config";
@@ -42,6 +40,12 @@ io.on("connection", (socket: Socket) => {
       if (data.token !== null) {
 
         if (existingUser.token === data.token) {
+
+          if (existingUser.socket.id === socket.id) { // TODO: to be deleted when client stops doubling requests
+            logger.debug(`Duplicate login request from ${data.nick} on same socket ${socket.id}`);
+            return;
+          }
+
           logger.info(`Restoring session of ${data.nick}`);
 
           existingUser.socket = socket;
@@ -52,7 +56,7 @@ io.on("connection", (socket: Socket) => {
             const room = rooms.get(existingUser.room_id);
             if (room) {
               logger.info(`Rejoining player ${existingUser.nick} to room ${existingUser.room_id}`);
-              room.handle_join(existingUser);
+              room.connect(existingUser);
             } else {
               logger.warn(`User ${existingUser.nick} had room_id ${existingUser.room_id} but room does not exist anymore`);
               existingUser.room_id = null;
@@ -151,10 +155,13 @@ io.on("connection", (socket: Socket) => {
     if (nick) {
       let user = users.get(nick);
       if (user) {
-        let new_room: Room = new Room(io);
+        let new_room: Room = new Room(io, (id) => {
+          rooms.delete(id);
+          logger.info(`Room ${id} deleted because it became empty.`);
+        });
         logger.info(`New room created! ID: ${new_room.id} Owner: ${nick}`);
 
-        new_room.handle_join(user);
+        new_room.connect(user);
         rooms.set(new_room.id, new_room);
         user.room_id = new_room.id;
 
@@ -179,7 +186,7 @@ io.on("connection", (socket: Socket) => {
         const room = rooms.get(room_info.id);
         if (room) {
           logger.info(`Player ${nick} joining room ${room_info.id}`);
-          room.handle_join(user);
+          room.connect(user);
           user.room_id = room.id;
         } else {
           logger.warn(`Join failed: Room ${room_info.id} not found for user ${nick}`);
