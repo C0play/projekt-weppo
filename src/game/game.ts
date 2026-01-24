@@ -346,7 +346,8 @@ export class Game {
       this.turn.timestamp = Date.now();
       if (this.is_dealer_blackjack()) {
         this.play_dealer();
-      } else {
+      }
+      else {
         if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
           this.next_turn();
         } else {
@@ -499,6 +500,7 @@ export class Game {
   private play_dealer(): void {
     if (this.is_dealer_blackjack()) {
       this.update_balances();
+      this.change_game_phase();
       return;
     }
     while (this.dealer.points < 17) {
