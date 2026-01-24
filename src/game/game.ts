@@ -294,6 +294,7 @@ export class Game {
           .number_of_full_aces > 0 &&
         this.is_bust()
       ) {
+        
         this.players[this.turn.player_idx].hands[this.turn.hand_idx].points -=
           10;
         this.players[this.turn.player_idx].hands[this.turn.hand_idx]
