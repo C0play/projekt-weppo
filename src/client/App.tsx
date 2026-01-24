@@ -135,7 +135,18 @@ function App() {
   if (view === "login") {
     return (
       <div className="app">
-        <h1>Multiplayer Blackjack</h1>
+        <h1
+          style={{
+            position: "absolute",
+            top: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            color: "#ffd700",
+            textShadow: "0 0 20px rgba(212, 175, 55, 0.5), 2px 2px 4px rgba(0, 0, 0, 0.8)",
+          }}
+        >
+          Multiplayer Blackjack
+        </h1>
         <LoginView onLogin={handleLogin} />
       </div>
     );

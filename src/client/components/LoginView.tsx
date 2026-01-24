@@ -12,9 +12,10 @@ export default function LoginView({ onLogin }: LoginViewProps) {
     <div className="login-container">
       <input
         type="text"
-        placeholder="Enter nickname"
+        placeholder="Enter your nickname"
         value={nickInput}
         onChange={(e) => setNickInput(e.target.value)}
+        onKeyPress={(e) => e.key === "Enter" && nickInput && onLogin(nickInput)}
         className="login-input"
         maxLength={20}
       />
