@@ -22,7 +22,7 @@ export interface RoomsResponse {
     id: string[];
 }
 
-export interface BetRequest {
+export interface ActionRequest {
     allowedMoves: Action[],
     time_left: number;
 }
