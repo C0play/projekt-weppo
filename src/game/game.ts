@@ -345,7 +345,7 @@ export class Game {
       this.turn.validMoves = [Action.INSURANCE];
       return;
     } else if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
-      this.next_turn();
+      this.turn.validMoves=[Action.STAND];
     } else this.turn.validMoves = this.valid_moves();
   }
   private next_insurance_turn(): void {
@@ -359,7 +359,7 @@ export class Game {
       }
       else {
         if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
-          this.next_turn();
+          this.turn.validMoves=[Action.STAND];
         } else {
           this.turn.validMoves = this.valid_moves();
         }
@@ -405,7 +405,7 @@ export class Game {
       this.next_turn();
     }
     if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
-      this.stand();
+      this.turn.validMoves=[Action.STAND];
     }
   }
 
@@ -509,6 +509,7 @@ export class Game {
 
   private play_dealer(): void {
     if (this.is_dealer_blackjack()) {
+      logger.debug("dealer wins with blackjack, changing game phase to BETTING")
       this.update_balances();
       this.change_game_phase();
       return;
