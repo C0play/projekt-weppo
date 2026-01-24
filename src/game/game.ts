@@ -174,6 +174,7 @@ export class Game {
   }
   public hit(): void {
     this.draw_card();
+    this.turn.validMoves = this.valid_moves();
     if (this.is_bust()) {
       this.next_turn();
     }
@@ -294,7 +295,7 @@ export class Game {
           .number_of_full_aces > 0 &&
         this.is_bust()
       ) {
-        
+
         this.players[this.turn.player_idx].hands[this.turn.hand_idx].points -=
           10;
         this.players[this.turn.player_idx].hands[this.turn.hand_idx]
@@ -346,7 +347,7 @@ export class Game {
       this.turn.validMoves = [Action.INSURANCE];
       return;
     } else if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
-      this.turn.validMoves=[Action.STAND];
+      this.turn.validMoves = [Action.STAND];
     } else this.turn.validMoves = this.valid_moves();
   }
   private next_insurance_turn(): void {
@@ -360,7 +361,7 @@ export class Game {
       }
       else {
         if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
-          this.turn.validMoves=[Action.STAND];
+          this.turn.validMoves = [Action.STAND];
         } else {
           this.turn.validMoves = this.valid_moves();
         }
@@ -406,21 +407,25 @@ export class Game {
       this.next_turn();
     }
     if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
-      this.turn.validMoves=[Action.STAND];
+      this.turn.validMoves = [Action.STAND];
     }
   }
 
   private valid_moves(): Action[] {
-    let validm = [Action.HIT, Action.STAND, Action.DOUBLE];
+    let validm = [Action.HIT, Action.STAND];
     const player = this.players[this.turn.player_idx];
     if (!player) return [];
     const cards = player.hands[this.turn.hand_idx].cards;
     if (cards.length > 2) {
       return validm;
     }
+    if (cards.length == 2) {
+      validm.push(Action.DOUBLE);
+    }
     if (cards.length === 2 && cards[0].rank === cards[1].rank) {
       validm.push(Action.SPLIT);
     }
+    logger.debug(`valid moves: ${validm}`)
     return validm;
   }
 
