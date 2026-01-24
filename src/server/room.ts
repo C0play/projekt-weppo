@@ -5,7 +5,7 @@ import { Action } from "../shared/types";
 import { Game } from "../game/game";
 import { GamePhase } from "../game/types";
 import { logger } from "../shared/logger";
-import { BetRequest, KickMessage } from "./types";
+import { ActionRequest, KickMessage } from "./types";
 
 
 export class Room {
@@ -44,8 +44,8 @@ export class Room {
             logger.info(`Player ${user.nick} joined room ${this.id} for the first time`);
         }
 
-        user.socket.on("action", (action: Action, amount?: number) => {
-            this.handle_action(user, action, amount);
+        user.socket.on("action", (action: Action, amount?: number, insurance_decision?: boolean) => {
+            this.handle_action(user, action, amount, insurance_decision);
         });
 
         this.emit_game_state();
@@ -66,7 +66,7 @@ export class Room {
         if (this.game.game_phase === GamePhase.BETTING) {
             logger.info(`Phase: BETTING. Waiting for bets from ${this.users.size} users.`);
             for (let user of this.users.values()) {
-                const resp: BetRequest = {
+                const resp: ActionRequest = {
                     allowedMoves: [Action.BET],
                     time_left: Date.now() + this.TIME_LIMIT * 2,
                 };
@@ -91,9 +91,9 @@ export class Room {
                 const validMoves = this.game.turn.validMoves;
                 let validNames = validMoves.map((move) => Action.toLowerCase(move));
 
-                logger.info(`Phase: PLAYING. Waiting for ${validNames} from ${current_user.nick} (current_player_idx: ${this.game.turn.player_idx})`);
+                logger.info(`Phase: PLAYING. Waiting for [${validNames}] from ${current_user.nick} (current_player_idx: ${this.game.turn.player_idx})`);
 
-                const req: BetRequest = {
+                const req: ActionRequest = {
                     allowedMoves: validMoves,
                     time_left: Date.now() + this.TIME_LIMIT,
                 };
@@ -243,6 +243,7 @@ export class Room {
             this.mark_as_inactive(user, "timed out");
         }
 
+        logger.debug(`Removing inactive users before switching phase to BETTING`);
         this.remove_inactive_users();
         this.game.change_game_phase();
         this.request_action();
@@ -286,7 +287,7 @@ export class Room {
                     room_id: this.id,
                 };
                 user.send("kick", msg);
-                
+
                 logger.info(`Notified and removed user ${nick} from room ${this.id}`);
             } else {
                 logger.warn(`Player ${nick} removed from game engine, but no user object found in room ${this.id}`);

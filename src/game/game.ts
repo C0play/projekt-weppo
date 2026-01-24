@@ -1,5 +1,6 @@
 import * as GameTypes from "./types";
 import { Action } from "../shared/types";
+import { logger } from "@shared/logger";
 // prettier-ignore
 export const d = new Date();
 function createDecks(numberOfDecks: number = 4): GameTypes.Card[] {
@@ -211,11 +212,13 @@ export class Game {
       if (this.number_of_players === 0) {
         return;
       }
+      logger.debug(`Changing game phase to PLAYING`);
       this.game_phase = GameTypes.GamePhase.PLAYING;
       this.deal_cards();
       return;
     }
     if (this.game_phase === GameTypes.GamePhase.PLAYING) {
+      logger.debug(`Changing game phase to BETTING`);
       this.game_phase = GameTypes.GamePhase.BETTING;
       this.new_game();
       return;
@@ -223,7 +226,14 @@ export class Game {
   }
 
   public get_current_player_nick(): string {
-    return this.players[this.turn.player_idx].nick;
+    let idx: number = this.turn.player_idx;
+    let player: Player = this.players[idx];
+    if (player === undefined || player === null) {
+      logger.error(`Player at index ${idx} is undefined, total players: [${this.players.length}]`);
+      return "";
+    } else {
+      return player.nick;
+    }
   }
 
   public remove_inactive_players(): string[] {
