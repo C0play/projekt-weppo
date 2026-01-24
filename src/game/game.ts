@@ -5,7 +5,21 @@ export const d = new Date();
 function createDecks(numberOfDecks: number = 4): GameTypes.Card[] {
   const deck: GameTypes.Card[] = [];
   const SUITS = ["hearts", "diamonds", "spades", "clubs"];
-  const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"];
+  const RANKS = [
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "jack",
+    "queen",
+    "king",
+    "ace",
+  ];
 
   for (let i = 0; i < numberOfDecks; i++) {
     for (const suit of SUITS) {
@@ -58,7 +72,15 @@ export class Player implements GameTypes.Player {
   public player_state: GameTypes.PlayerState;
   constructor(nick: string) {
     this.nick = nick;
-    this.hands = [{ cards: [], bet: 0, number_of_full_aces: 0, points: 0, is_insured: false }];
+    this.hands = [
+      {
+        cards: [],
+        bet: 0,
+        number_of_full_aces: 0,
+        points: 0,
+        is_insured: false,
+      },
+    ];
     this.balance = 1000;
     this.player_idx = 0;
     this.player_state = GameTypes.PlayerState.INACTIVE;
@@ -129,10 +151,12 @@ export class Game {
   }
   public split(): void {
     let nb_of_aces = 0;
-    let card = this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
+    let card =
+      this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
 
     if (card) {
-      this.players[this.turn.player_idx].hands[this.turn.hand_idx].points = card.point;
+      this.players[this.turn.player_idx].hands[this.turn.hand_idx].points =
+        card.point;
       if (card.rank === "ace") {
         nb_of_aces++;
       }
@@ -145,6 +169,7 @@ export class Game {
       };
       this.players[this.turn.player_idx].hands.push(newHand);
     }
+    this.draw_card(); //fixed split logic
   }
   public hit(): void {
     this.draw_card();
@@ -157,12 +182,17 @@ export class Game {
       this.players[this.turn.player_idx].balance -= Math.round(
         this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet / 2,
       );
-      this.players[this.turn.player_idx].hands[this.turn.hand_idx].is_insured = true;
+      this.players[this.turn.player_idx].hands[this.turn.hand_idx].is_insured =
+        true;
     }
     this.next_insurance_turn();
     return;
   }
   public bet(bet_amount: number, nick: string): boolean {
+    if (bet_amount < 0) //handled negative bets
+    {
+      return false;
+    }
     for (let i = 0; i < this.players.length; i++) {
       if (this.players[i].nick === nick) {
         if (this.players[i].balance >= bet_amount) {
@@ -217,7 +247,7 @@ export class Game {
     }
     return no_bet_players;
   }
-  
+
   public get_player_bet(nick: string): number {
     for (let i = 0; i < this.players.length; i++) {
       if (this.players[i].nick === nick) {
@@ -241,13 +271,23 @@ export class Game {
     let card = this.deck.pop();
     if (card) {
       if (card.rank === "ace") {
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx].number_of_full_aces++;
+        this.players[this.turn.player_idx].hands[this.turn.hand_idx]
+          .number_of_full_aces++;
       }
-      this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.push(card);
-      this.players[this.turn.player_idx].hands[this.turn.hand_idx].points += card.point;
-      if (this.players[this.turn.player_idx].hands[this.turn.hand_idx].number_of_full_aces > 0 && this.is_bust()) {
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx].points -= 10;
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx].number_of_full_aces--;
+      this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.push(
+        card,
+      );
+      this.players[this.turn.player_idx].hands[this.turn.hand_idx].points +=
+        card.point;
+      if (
+        this.players[this.turn.player_idx].hands[this.turn.hand_idx]
+          .number_of_full_aces > 0 &&
+        this.is_bust()
+      ) {
+        this.players[this.turn.player_idx].hands[this.turn.hand_idx].points -=
+          10;
+        this.players[this.turn.player_idx].hands[this.turn.hand_idx]
+          .number_of_full_aces--;
       }
     }
   }
@@ -294,16 +334,24 @@ export class Game {
     if (this.dealer.cards[0].rank === "ace") {
       this.turn.validMoves = [Action.INSURANCE];
       return;
-    }
-    this.turn.validMoves = this.valid_moves();
+    } else if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
+      this.next_turn();
+    } else this.turn.validMoves = this.valid_moves();
   }
   private next_insurance_turn(): void {
     if (this.turn.player_idx + 1 === this.players.length) {
-      this.turn = new Turn();
+      this.turn.player_idx = 0;
+      this.turn.hand_idx = 0;
+      this.turn.validMoves = [];
+      this.turn.timestamp = Date.now();
       if (this.is_dealer_blackjack()) {
         this.play_dealer();
       } else {
-        this.turn.validMoves = this.valid_moves();
+        if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
+          this.next_turn();
+        } else {
+          this.turn.validMoves = this.valid_moves();
+        }
       }
     } else {
       this.turn.player_idx++;
@@ -311,7 +359,10 @@ export class Game {
   }
   private next_turn(): void {
     this.turn.timestamp = Date.now();
-    if (this.players[this.turn.player_idx].hands.length === this.turn.hand_idx + 1) {
+    if (
+      this.players[this.turn.player_idx].hands.length ===
+      this.turn.hand_idx + 1
+    ) {
       if (this.players.length === this.turn.player_idx + 1) {
         this.turn.player_idx++;
         this.play_dealer();
@@ -323,11 +374,23 @@ export class Game {
     } else {
       this.turn.hand_idx++;
     }
+    if (
+      this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards
+        .length === 1
+    ) {
+      this.draw_card();
+    }
     this.turn.validMoves = this.valid_moves();
-    if (this.players[this.turn.player_idx].player_state === GameTypes.PlayerState.INACTIVE) {
+    if (
+      this.players[this.turn.player_idx].player_state ===
+      GameTypes.PlayerState.INACTIVE
+    ) {
       this.stand();
     }
-    if (this.players[this.turn.player_idx].player_state === GameTypes.PlayerState.SPECTATING) {
+    if (
+      this.players[this.turn.player_idx].player_state ===
+      GameTypes.PlayerState.SPECTATING
+    ) {
       this.next_turn();
     }
     if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
@@ -350,7 +413,9 @@ export class Game {
   }
 
   private is_bust(): boolean {
-    if (this.players[this.turn.player_idx].hands[this.turn.hand_idx].points > 21) {
+    if (
+      this.players[this.turn.player_idx].hands[this.turn.hand_idx].points > 21
+    ) {
       return true;
     }
     return false;
@@ -374,18 +439,24 @@ export class Game {
   }
 
   private win(player_idx: number, hand_idx: number): void {
-    this.players[player_idx].balance += 2 * this.players[player_idx].hands[hand_idx].bet;
+    this.players[player_idx].balance +=
+      2 * this.players[player_idx].hands[hand_idx].bet;
   }
 
   private win_bj(player_idx: number, hand_idx: number): void {
-    this.players[player_idx].balance += Math.round(2.5 * this.players[player_idx].hands[hand_idx].bet);
+    this.players[player_idx].balance += Math.round(
+      2.5 * this.players[player_idx].hands[hand_idx].bet,
+    );
   }
 
   private push(player_idx: number, hand_idx: number): void {
-    this.players[player_idx].balance += this.players[player_idx].hands[hand_idx].bet;
+    this.players[player_idx].balance +=
+      this.players[player_idx].hands[hand_idx].bet;
   }
   private insurance_payout(player_idx: number, hand_idx: number): void {
-    this.players[player_idx].balance += Math.round(1.5 * this.players[player_idx].hands[hand_idx].bet);
+    this.players[player_idx].balance += Math.round(
+      1.5 * this.players[player_idx].hands[hand_idx].bet,
+    );
   }
 
   private update_balances(): void {
@@ -443,17 +514,16 @@ export class Game {
       if (this.players[i].player_state === GameTypes.PlayerState.SPECTATING) {
         this.players[i].player_state = GameTypes.PlayerState.ACTIVE;
       }
-      for (let j = 0; j < this.players[i].hands.length; j++) {
-        if (j === 0) {
-          this.players[i].hands[j].cards = [];
-          this.players[i].hands[j].points = 0;
-          this.players[i].hands[j].number_of_full_aces = 0;
-          this.players[i].hands[j].bet = 0;
-        } else {
-          this.players[i].hands.splice(j, this.players[i].hands.length - 2);
-        }
+
+      this.players[i].hands[0].cards = [];
+      this.players[i].hands[0].points = 0;
+      this.players[i].hands[0].number_of_full_aces = 0;
+      this.players[i].hands[0].bet = 0;
+      if (this.players[i].hands.length > 1) {
+        this.players[i].hands.splice(1);
       }
     }
+
     this.dealer.cards = [];
     this.dealer.points = 0;
     this.dealer.number_of_full_aces = 0;
