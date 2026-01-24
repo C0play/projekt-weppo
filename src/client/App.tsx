@@ -69,9 +69,6 @@ function App() {
       setDeadline(null);
       setView("lobby");
       socket.emit("get_games");
-      /* socket.disconnect(); // Connect again to refresh state properly or just leave it open?
-      // Reconnecting to ensure clean slate might be better but let's just create new one or ensure we dont have old listeners
-      socket.connect(); */
     };
 
     socket.on("connect", handleConnect);
