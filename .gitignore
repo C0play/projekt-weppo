@@ -43,3 +43,6 @@ coverage
 
 # TypeScript
 *.tsbuildinfo
+
+#Github
+.github
