@@ -7,6 +7,7 @@ import "./App.css";
 import LoginView from "./components/LoginView";
 import LobbyView from "./components/LobbyView";
 import GameView from "./components/GameView";
+import RejoinDialog from "./components/RejoinDialog";
 
 import { GameState as SharedGameState } from "../game/types";
 import { Action } from "../shared/types";
@@ -24,6 +25,8 @@ function App() {
   const [gameIds, setGameIds] = useState<string[]>([]);
   const [gameState, setGameState] = useState<SharedGameState | null>(null);
   const [deadline, setDeadline] = useState<number | null>(null);
+  const [showRejoinDialog, setShowRejoinDialog] = useState(false);
+  const [kickedRoomId, setKickedRoomId] = useState<string | null>(null);
 
   const handleLoginResponse = (data: LoginResponse) => {
     console.log("Login response:", data);
@@ -64,11 +67,18 @@ function App() {
     };
     const handleKick = (data: { reason: string; room_id: string }) => {
       console.log("Kicked from room:", data);
-      alert(`You were kicked from the game: ${data.reason}`);
       setGameState(null);
       setDeadline(null);
-      setView("lobby");
-      socket.emit("get_games");
+
+      if (data.reason === "timed out") {
+        setKickedRoomId(data.room_id);
+        setShowRejoinDialog(true);
+        setView("lobby");
+      } else {
+        alert(`You were kicked from the game: ${data.reason}`);
+        setView("lobby");
+        socket.emit("get_games");
+      }
     };
 
     socket.on("connect", handleConnect);
@@ -124,6 +134,21 @@ function App() {
     socket.emit("join_game", req);
   };
 
+  const handleRejoinGame = () => {
+    if (kickedRoomId) {
+      const req: RoomRequest = { id: kickedRoomId };
+      socket.emit("join_game", req);
+      setShowRejoinDialog(false);
+      setKickedRoomId(null);
+    }
+  };
+
+  const handleCancelRejoin = () => {
+    setShowRejoinDialog(false);
+    setKickedRoomId(null);
+    socket.emit("get_games");
+  };
+
   const handleExitGame = () => {
     setView("lobby");
     // Optionally emit a leave room event if server supports it
@@ -162,6 +187,7 @@ function App() {
           onRefreshList={handleRefreshList}
           onJoinGame={handleJoinGame}
         />
+        {showRejoinDialog && <RejoinDialog onRejoin={handleRejoinGame} onCancel={handleCancelRejoin} />}
       </div>
     );
   }
