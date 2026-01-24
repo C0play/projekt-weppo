@@ -9,10 +9,10 @@ interface GameControlsProps {
   socket: Socket;
   gameState: GameState;
   nick: string;
-  timeLeft: number | null;
+  deadline: number | null;
 }
 
-export default function GameControls({ socket, gameState, nick, timeLeft }: GameControlsProps) {
+export default function GameControls({ socket, gameState, nick, deadline }: GameControlsProps) {
   const [betAmount, setBetAmount] = useState(100);
 
   const isMyTurn = gameState.players[gameState.turn.player_idx]?.nick === nick;
@@ -33,7 +33,7 @@ export default function GameControls({ socket, gameState, nick, timeLeft }: Game
               ? "It's your turn!"
               : `Current turn: ${gameState.players[gameState.turn.player_idx]?.nick || "Unknown"}`}
         </h3>
-        <Timer timeLeft={timeLeft} totalTime={isBettingPhase ? 20 : 10} />
+        <Timer key={deadline || "timer"} deadline={deadline} totalTime={isBettingPhase ? 20 : 10} />
       </div>
 
       {showControls && (

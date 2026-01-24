@@ -1,29 +1,49 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./Timer.css";
 
 interface TimerProps {
-  timeLeft: number | null;
+  deadline: number | null;
   totalTime?: number;
 }
 
-export default function Timer({ timeLeft, totalTime = 30 }: TimerProps) {
-  const [currentTime, setCurrentTime] = useState(timeLeft ?? 0);
+export default function Timer({ deadline, totalTime = 30 }: TimerProps) {
+  // Helpers to calculate seconds remaining
+  const calculateSeconds = () => {
+    if (!deadline) return 0;
+    return Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+  };
+
+  const [currentTime, setCurrentTime] = useState(calculateSeconds());
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    setCurrentTime(timeLeft ?? 0);
-  }, [timeLeft]);
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
-  useEffect(() => {
-    if (timeLeft === null || timeLeft <= 0) return;
+    // Initial sync
+    setCurrentTime(calculateSeconds());
 
-    const interval = setInterval(() => {
-      setCurrentTime((prev) => (prev !== null && prev > 0 ? prev - 1 : 0));
-    }, 1000);
+    if (deadline && deadline > Date.now()) {
+      intervalRef.current = setInterval(() => {
+        const seconds = calculateSeconds();
+        setCurrentTime(seconds);
+        if (seconds <= 0 && intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      }, 1000);
+    }
 
-    return () => clearInterval(interval);
-  }, [timeLeft]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [deadline]); // Re-run when deadline changes
 
-  if (timeLeft === null) return null;
+  if (deadline === null) return null;
 
   const percentage = totalTime > 0 ? (currentTime / totalTime) * 100 : 0;
   const isUrgent = currentTime < 5;
