@@ -78,12 +78,24 @@ export default function GameControls({ socket, gameState, nick, deadline }: Game
                 SPLIT
               </button>
               {validMoves.includes("insurance") && (
-                <button
-                  onClick={() => socket.emit("action", Action.INSURANCE, undefined, true)}
-                  className="control-btn btn-insurance"
-                >
-                  INSURANCE
-                </button>
+                <div className="insurance-controls">
+                  <div className="insurance-info">
+                    Insurance? (Cost:{" "}
+                    {gameState.players[gameState.turn.player_idx].hands[gameState.turn.hand_idx].bet / 2})
+                  </div>
+                  <button
+                    onClick={() => socket.emit("action", Action.INSURANCE, undefined, true)}
+                    className="control-btn btn-insurance-yes"
+                  >
+                    YES
+                  </button>
+                  <button
+                    onClick={() => socket.emit("action", Action.INSURANCE, undefined, false)}
+                    className="control-btn btn-insurance-no"
+                  >
+                    NO
+                  </button>
+                </div>
               )}
             </>
           )}

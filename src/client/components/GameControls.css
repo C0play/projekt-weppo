@@ -152,3 +152,17 @@
   font-weight: bold;
   animation: pulse 0.5s infinite;
 }
+.btn-insurance-no {
+  background-color: #f44336;
+  border-bottom: 4px solid #d32f2f;
+}
+.btn-insurance-no:hover:not(:disabled) {
+  background-color: #ef5350;
+}
+.btn-insurance-yes {
+  background-color: #4caf50;
+  border-bottom: 4px solid #388e3c;
+}
+.btn-insurance-yes:hover:not(:disabled) {
+  background-color: #66bb6a;
+}
