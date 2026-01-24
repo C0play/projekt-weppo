@@ -20,7 +20,6 @@ export class Room {
     private timeout: NodeJS.Timeout | null = null;
 
 
-
     constructor(io: Server, on_empty?: (id: string) => void) {
         this.id = crypto.randomUUID();
         this.game = new Game();
@@ -28,14 +27,15 @@ export class Room {
         this.on_empty = on_empty;
     }
 
+
     public connect(user: User): void {
 
         user.socket.removeAllListeners("action");
 
-        if (this.users.has(user.nick)) {                                    // reconnecting
+        if (this.users.has(user.nick)) {                                        // reconnecting
             logger.info(`Player ${user.nick} re-connected to room ${this.id}`);
             this.mark_as_active(user);
-        } else {                                                            // connecting
+        } else {                                                                // connecting
             user.room_id = this.id;
             this.users.set(user.nick, user);
             this.game.connect_player(user.nick);
@@ -52,6 +52,7 @@ export class Room {
 
         if (this.users.size == 1) { this.request_action(); }
     }
+
 
     private request_action(): void {
 
@@ -115,6 +116,7 @@ export class Room {
             }
         }
     }
+
 
     private handle_action(
         user: User,
@@ -220,9 +222,10 @@ export class Room {
         this.timeout = null;
 
         this.game.stand();
-        this.mark_as_inactive(user, "timed out");
+        // this.mark_as_inactive(user, "timed out");
         this.request_action();
     }
+
 
     private handle_betting_timeout(): void {
         if (this.timeout !== null) {
@@ -243,16 +246,16 @@ export class Room {
             this.mark_as_inactive(user, "timed out");
         }
 
-        logger.debug(`Removing inactive users before switching phase to BETTING`);
         this.remove_inactive_users();
         this.game.change_game_phase();
         this.request_action();
     }
 
+
     public mark_as_inactive(user: User, reason: string): void {
         logger.info(`Marking player ${user.nick} as inactive in room ${this.id}. Reason: ${reason}`);
         user.active = false;
-        user.socket.leave(this.id);
+        // user.socket.leave(this.id);
         user.socket.removeListener("action", this.handle_action);
         const msg: KickMessage = {
             reason: reason,
@@ -262,6 +265,7 @@ export class Room {
         this.game.mark_as_inactive(user.nick);
     }
 
+
     private mark_as_active(user: User): void {
         logger.info(`Marking player ${user.nick} as active in room ${this.id}`);
         user.active = true;
@@ -269,15 +273,24 @@ export class Room {
         this.game.mark_as_active(user.nick);
     }
 
+
     private remove_inactive_users(): void {
         if (this.game.game_phase === GamePhase.PLAYING) {
-            logger.debug(`Skipping removal of inactive users during PLAYING phase in room ${this.id}`);
+            logger.debug(`Skipping removal of inactive users: phase is BETTING`);
             return;
         }
 
-        for (let nick of this.game.remove_inactive_players()) {
+        const nicks: string[] = this.game.remove_inactive_players();
+        if (nicks.length > 0) {
+            logger.debug(`Removing inactive users in room ${this.id}: [${nicks}]`);
+        } else {
+            logger.debug(`No players to remove`);
+        }
+
+        for (let nick of nicks) {
             const user = this.users.get(nick);
             if (user) {
+                user.socket.leave(this.id);
                 user.active = false;
                 user.room_id = null;
                 user.socket.leave(this.id);
@@ -304,9 +317,11 @@ export class Room {
         }
     }
 
+
     private emit_game_state(): void {
         this.io.to(this.id).emit("game", this.game);
     }
+
 
     public destroy() {
         if (this.timeout) clearTimeout(this.timeout);

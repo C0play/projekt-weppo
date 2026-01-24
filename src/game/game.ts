@@ -108,7 +108,6 @@ export class Game {
 
   //============================PUBLIC METHODS===================================================================
   public connect_player(nick: string): boolean {
-    // TODO: extend with reconnection logic (DONE)
 
     if (this.number_of_players + 1 > this.max_players) {
       return false;
