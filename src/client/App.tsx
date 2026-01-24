@@ -23,7 +23,7 @@ function App() {
   const [_, setToken] = useState<string | null>(null);
   const [gameIds, setGameIds] = useState<string[]>([]);
   const [gameState, setGameState] = useState<SharedGameState | null>(null);
-  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+  const [deadline, setDeadline] = useState<number | null>(null);
 
   const handleLoginResponse = (data: LoginResponse) => {
     console.log("Login response:", data);
@@ -56,14 +56,22 @@ function App() {
     };
     const handleYourTurn = (data: { allowedMoves: Action[]; time_left: number }) => {
       console.log("Your turn!", data);
-      // time_left is a deadline (timestamp), calculate remaining seconds
-      const remainingMs = data.time_left - Date.now();
-      const remainingSeconds = Math.max(0, Math.floor(remainingMs / 1000));
-      setTimeLeft(remainingSeconds);
+      setDeadline(data.time_left);
     };
     const handleError = (err: string | { msg: string }) => {
       const msg = typeof err === "string" ? err : err.msg;
       alert(msg);
+    };
+    const handleKick = (data: { reason: string; room_id: string }) => {
+      console.log("Kicked from room:", data);
+      alert(`You were kicked from the game: ${data.reason}`);
+      setGameState(null);
+      setDeadline(null);
+      setView("lobby");
+      socket.emit("get_games");
+      /* socket.disconnect(); // Connect again to refresh state properly or just leave it open?
+      // Reconnecting to ensure clean slate might be better but let's just create new one or ensure we dont have old listeners
+      socket.connect(); */
     };
 
     socket.on("connect", handleConnect);
@@ -72,6 +80,7 @@ function App() {
     socket.on("game", handleGameUpdate);
     socket.on("your_turn", handleYourTurn);
     socket.on("error", handleError);
+    socket.on("kick", handleKick);
 
     // Attempt auto-login if token exists
     const savedToken = localStorage.getItem("player_token");
@@ -88,6 +97,7 @@ function App() {
       socket.off("game", handleGameUpdate);
       socket.off("your_turn", handleYourTurn);
       socket.off("error", handleError);
+      socket.off("kick", handleKick);
     };
   }, []);
 
@@ -154,7 +164,7 @@ function App() {
 
   return (
     <div className="app">
-      <GameView socket={socket} gameState={gameState} nick={nick} timeLeft={timeLeft} onExit={handleExitGame} />
+      <GameView socket={socket} gameState={gameState} nick={nick} deadline={deadline} onExit={handleExitGame} />
     </div>
   );
 }

@@ -9,11 +9,11 @@ interface GameViewProps {
   socket: Socket;
   gameState: GameState;
   nick: string;
-  timeLeft: number | null;
+  deadline: number | null;
   onExit: () => void;
 }
 
-export default function GameView({ socket, gameState, nick, timeLeft, onExit }: GameViewProps) {
+export default function GameView({ socket, gameState, nick, deadline, onExit }: GameViewProps) {
   const currentPlayer = gameState.players.find((p) => p.nick === nick);
   const currentBalance = currentPlayer?.balance || 0;
 
@@ -31,7 +31,7 @@ export default function GameView({ socket, gameState, nick, timeLeft, onExit }: 
 
   return (
     <>
-      <GameControls socket={socket} gameState={gameState} nick={nick} timeLeft={timeLeft} />
+      <GameControls socket={socket} gameState={gameState} nick={nick} deadline={deadline} />
 
       <div className="game-table">
         <button className="exit-btn" onClick={onExit}>
