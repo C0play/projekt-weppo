@@ -225,10 +225,10 @@ export class Game {
       return;
     }
     if (this.game_phase === GameTypes.GamePhase.RESULTS) {
-        logger.debug(`Changing game phase to BETTING`);
-        this.game_phase = GameTypes.GamePhase.BETTING;
-        this.new_game();
-        return;
+      logger.debug(`Changing game phase to BETTING`);
+      this.game_phase = GameTypes.GamePhase.BETTING;
+      this.new_game();
+      return;
     }
   }
 
@@ -320,8 +320,8 @@ export class Game {
       }
       this.dealer.cards.push(card);
       this.dealer.points += card.point;
-      if (this.dealer.points >21) {
-        this.dealer.points -=10;
+      if (this.dealer.points > 21) {
+        this.dealer.points -= 10;
         this.dealer.number_of_full_aces--;
       }
     }
@@ -366,7 +366,8 @@ export class Game {
     } else this.turn.validMoves = this.valid_moves();
   }
   private next_insurance_turn(): void {
-    if (this.turn.player_idx + 1 === this.players.length) {
+
+    if (this.turn.player_idx + 1 >= this.players.length) {
       this.turn.player_idx = 0;
       this.turn.hand_idx = 0;
       this.turn.validMoves = [];
@@ -383,6 +384,15 @@ export class Game {
       }
     } else {
       this.turn.player_idx++;
+
+      if (
+        this.players[this.turn.player_idx].player_state ===
+        GameTypes.PlayerState.SPECTATING ||
+        this.players[this.turn.player_idx].player_state ===
+        GameTypes.PlayerState.INACTIVE
+      ) {
+        this.next_insurance_turn();
+      }
     }
   }
   private next_turn(): void {
@@ -505,7 +515,7 @@ export class Game {
           if (isPlayerBJ) {
             this.push(i, j);
           } else {
-             this.players[i].hands[j].result = "LOSE";
+            this.players[i].hands[j].result = "LOSE";
           }
           if (isHandInsured) {
             this.insurance_payout(i, j);
@@ -524,17 +534,17 @@ export class Game {
         }
 
         if (this.dealer.points > 21) {
-            this.win(i, j);
-            continue;
+          this.win(i, j);
+          continue;
         }
 
         // Neither bust, no BJ involved
         if (points > this.dealer.points) {
-            this.win(i, j);
+          this.win(i, j);
         } else if (points === this.dealer.points) {
-            this.push(i, j);
+          this.push(i, j);
         } else {
-            this.players[i].hands[j].result = "LOSE";
+          this.players[i].hands[j].result = "LOSE";
         }
       }
     }
