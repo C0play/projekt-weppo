@@ -144,6 +144,7 @@ export class Game {
   public double(): void {
     const player_idx = this.turn.player_idx;
     const hand_idx = this.turn.hand_idx;
+    this.players[player_idx].balance-=(this.players[player_idx].hands[hand_idx].bet)
     this.players[player_idx].hands[hand_idx].bet *= 2;
     this.draw_card();
     this.next_turn();
@@ -158,6 +159,7 @@ export class Game {
     if (card) {
       this.players[player_idx].hands[hand_idx].points =
         card.point;
+      this.players[player_idx].balance-=this.players[player_idx].hands[hand_idx].bet
       if (card.rank === "ace") {
         nb_of_aces++;
       }
@@ -472,6 +474,7 @@ export class Game {
   }
 
   private valid_moves(): Action[] {
+    const bet = this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet
     let validm = [Action.HIT, Action.STAND];
     const player = this.players[this.turn.player_idx];
     if (!player) return [];
@@ -479,10 +482,10 @@ export class Game {
     if (cards.length > 2) {
       return validm;
     }
-    if (cards.length == 2) {
+    if (cards.length == 2 && this.players[this.turn.player_idx].balance >=bet) {
       validm.push(Action.DOUBLE);
     }
-    if (cards.length === 2 && cards[0].rank === cards[1].rank) {
+    if (cards.length === 2 && cards[0].rank === cards[1].rank && this.players[this.turn.player_idx].balance >=bet) {
       validm.push(Action.SPLIT);
     }
     logger.debug(`valid moves: ${validm}`);
