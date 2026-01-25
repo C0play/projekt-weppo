@@ -424,12 +424,14 @@ export class Game {
       GameTypes.PlayerState.INACTIVE
     ) {
       this.stand();
+      return; 
     }
     if (
       this.players[this.turn.player_idx].player_state ===
       GameTypes.PlayerState.SPECTATING
     ) {
       this.next_turn();
+      return;
     }
     if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
       this.turn.validMoves = [Action.STAND];
