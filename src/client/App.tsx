@@ -9,7 +9,7 @@ import LobbyView from "./components/LobbyView";
 import GameView from "./components/GameView";
 import RejoinDialog from "./components/RejoinDialog";
 
-import { GameState as SharedGameState } from "../game/types";
+import { GameState as SharedGameState, GamePhase } from "../game/types";
 import { ActionRequest, KickMessage } from "../shared/types";
 import { Config } from "../shared/config";
 import { LoginRequest, LoginResponse, RoomRequest, RoomsResponse } from "../shared/types";
@@ -61,7 +61,7 @@ function App() {
       console.log("Your turn!", data);
       setDeadline(data.end_timestamp);
     };
-    const handleError = (err: string | { msg: string; }) => {
+    const handleError = (err: string | { msg: string }) => {
       const msg = typeof err === "string" ? err : err.msg;
       alert(msg);
     };
@@ -107,6 +107,19 @@ function App() {
       socket.off("kick", handleKick);
     };
   }, []);
+
+  // Sync deadline with game state (remove timer if not my turn)
+  useEffect(() => {
+    if (!gameState || !nick) return;
+
+    if (gameState.game_phase === GamePhase.PLAYING) {
+      const currentPlayer = gameState.players[gameState.turn.player_idx];
+      // If it's playing phase and NOT my turn, verify I don't have a lingering timer
+      if (currentPlayer && currentPlayer.nick !== nick) {
+        setDeadline((prev) => (prev !== null ? null : prev));
+      }
+    }
+  }, [gameState, nick]);
 
   // --- Callbacks for Child Components ---
 
