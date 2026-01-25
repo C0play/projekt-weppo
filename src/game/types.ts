@@ -15,6 +15,7 @@ export interface Hand {
     is_insured: boolean;
     number_of_full_aces: number;
     result?: HandResult;
+    balance_change: number
 }
 
 export interface Dealer {
