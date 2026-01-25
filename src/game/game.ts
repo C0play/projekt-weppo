@@ -274,6 +274,10 @@ export class Game {
     return -1;
   }
 
+  public has_player(nick: string): boolean {
+    return this.players.some(p => p.nick === nick);
+  }
+
   //================PRIVATE METHODS=============================================================================
   private delete_player(idx: number): void {
     this.players.splice(idx, 1);

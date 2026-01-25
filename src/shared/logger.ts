@@ -1,9 +1,18 @@
 import winston from "winston";
 
-const { combine, timestamp, printf, colorize, align } = winston.format;
+const { combine, timestamp, printf, colorize } = winston.format;
 
-const logFormat = printf(({ level, message, timestamp }) => {
-    return `[${timestamp}] ${level}: ${message}`;
+interface LogInfo extends winston.Logform.TransformableInfo {
+    roomId?: string;
+    nick?: string;
+    timestamp?: string;
+}
+
+const logFormat = printf((info: winston.Logform.TransformableInfo) => {
+    const { timestamp, level, message, roomId, nick } = info as LogInfo;
+    const roomPart = roomId ? ` [${roomId.substring(0, 6)}]` : ' [-]'; // Consistent placeholders
+    const nickPart = nick ? ` [${nick}]` : ' [-]';
+    return `[${timestamp}] ${level}:${roomPart}${nickPart} ${message}`;
 });
 
 export const logger = winston.createLogger({
@@ -13,7 +22,6 @@ export const logger = winston.createLogger({
         timestamp({
             format: "YYYY-MM-DD HH:mm:ss",
         }),
-        align(),
         logFormat
     ),
     transports: [

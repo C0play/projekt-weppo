@@ -167,15 +167,11 @@ function App() {
   };
 
   const handleExitGame = () => {
-    if (currentRoomId) {
-      const req: RoomRequest = { id: currentRoomId };
-      socket.emit("leave_game", req);
-    }
+    socket.emit("leave_game");
     setView("lobby");
     setGameState(null);
     setDeadline(null);
     setCurrentRoomId(null);
-    console.log("leaved");
   };
 
   // --- Render ---
