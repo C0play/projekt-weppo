@@ -10,9 +10,9 @@ import GameView from "./components/GameView";
 import RejoinDialog from "./components/RejoinDialog";
 
 import { GameState as SharedGameState } from "../game/types";
-import { Action } from "../shared/types";
+import { ActionRequest, KickMessage } from "../shared/types";
 import { Config } from "../shared/config";
-import { LoginRequest, LoginResponse, RoomRequest, RoomsResponse } from "../server/types";
+import { LoginRequest, LoginResponse, RoomRequest, RoomsResponse } from "../shared/types";
 
 // NOTE: Ideally socket should be in a separate context or service,
 // but sticking to existing pattern for this refactor.
@@ -57,20 +57,20 @@ function App() {
       setGameState(game);
       setView("game");
     };
-    const handleYourTurn = (data: { allowedMoves: Action[]; time_left: number }) => {
+    const handleYourTurn = (data: ActionRequest) => {
       console.log("Your turn!", data);
-      setDeadline(data.time_left);
+      setDeadline(data.end_timestamp);
     };
-    const handleError = (err: string | { msg: string }) => {
+    const handleError = (err: string | { msg: string; }) => {
       const msg = typeof err === "string" ? err : err.msg;
       alert(msg);
     };
-    const handleKick = (data: { reason: string; room_id: string }) => {
+    const handleKick = (data: KickMessage) => {
       console.log("Kicked from room:", data);
       setGameState(null);
       setDeadline(null);
 
-      if (data.reason === "timed out") {
+      if (data.reason === "removed") {
         setKickedRoomId(data.room_id);
         setShowRejoinDialog(true);
         setView("lobby");
