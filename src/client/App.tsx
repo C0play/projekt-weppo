@@ -62,7 +62,7 @@ function App() {
       console.log("Your turn!", data);
       setDeadline(data.end_timestamp);
     };
-    const handleError = (err: string | { msg: string }) => {
+    const handleError = (err: string | { msg: string; }) => {
       const msg = typeof err === "string" ? err : err.msg;
       alert(msg);
     };

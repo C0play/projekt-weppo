@@ -157,20 +157,21 @@ io.on("connection", (socket: Socket) => {
       if (user) {
         let new_room: Room = new Room(io, (id) => {
           rooms.delete(id);
-          logger.info(`Room ${id} deleted because it became empty.`);
+          logger.info(`Room ${id} deleted.`);
         });
         logger.info(`New room created! ID: ${new_room.id} Owner: ${nick}`);
 
-        new_room.connect(user);
         rooms.set(new_room.id, new_room);
-        user.room_id = new_room.id;
+        new_room.connect(user);
 
         logger.info(`Total active rooms now: ${rooms.size}`);
         socket.emit("game", new_room.game);
+
       } else {
         logger.error(`Create failed: User nick ${nick} found but no User object for socket ${socket.id}`);
         sockets.delete(socket.id);
         socket.emit("error", `Internal error, please log in again.`);
+
       }
     } else {
       socket.emit("error", `You are not registered (${socket.id})`);
@@ -186,14 +187,16 @@ io.on("connection", (socket: Socket) => {
         if (user.room_id !== null) {
           user.send("error", `You are already in a room ${user.room_id}`);
         }
+
         const room = rooms.get(room_info.id);
         if (room) {
           logger.info(`Player ${nick} joining room ${room_info.id}`);
           room.connect(user);
-          user.room_id = room.id;
+
         } else {
           logger.warn(`Join failed: Room ${room_info.id} not found for user ${nick}`);
           socket.emit("error", `Requested game does not exist.`);
+
         }
       } else {
         logger.error(`Join failed: User object missing for nick ${nick}`);

@@ -142,7 +142,6 @@ export class Room {
                 });
                 this.emit_game_state();
 
-
             } else {
                 logger.error(`Critical Error: Nick '${current_player_nick}' is the current player in Game engine, but no User object exists in Room ${this.id}`);
             }
@@ -188,7 +187,9 @@ export class Room {
 
             const current_user = this.users.get(this.game.get_current_player_nick());
             if (!current_user) {
-                logger.error(`Logic error: No user object found for current player nick: ${this.game.get_current_player_nick()}`);
+                logger.error(`Logic error: No user object found for current player nick:
+                     ${this.game.get_current_player_nick()}`
+                );
                 user.send("error", `Internal server error, no user was found for the current player.`);
                 return;
             }
@@ -200,7 +201,9 @@ export class Room {
             }
 
             if (!this.game.turn.validMoves.includes(action)) {
-                logger.warn(`Player ${user.nick} tried invalid action: ${Action.toLowerCase(action)} (valid: [${this.game.turn.validMoves.map(m => Action.toLowerCase(m))}])`);
+                logger.warn(`Player ${user.nick} tried invalid action: ${Action.toLowerCase(action)}
+                 (valid: [${this.game.turn.validMoves.map(m => Action.toLowerCase(m))}])`
+                );
                 user.send("error", `You can not perform this action: ${action}`);
                 return;
             }
