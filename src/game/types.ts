@@ -6,12 +6,15 @@ export interface Card {
   point: number;
 }
 
+export type HandResult = "WIN" | "LOSE" | "PUSH" | "BLACKJACK" | "BUST";
+
 export interface Hand {
-  bet: number;
-  cards: Card[];
-  points: number;
-  is_insured: boolean;
-  number_of_full_aces: number;
+    bet: number;
+    cards: Card[];
+    points: number;
+    is_insured: boolean;
+    number_of_full_aces: number;
+    result?: HandResult;
 }
 
 export interface Dealer {

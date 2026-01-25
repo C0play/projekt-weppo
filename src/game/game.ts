@@ -473,17 +473,20 @@ export class Game {
   private win(player_idx: number, hand_idx: number): void {
     this.players[player_idx].balance +=
       2 * this.players[player_idx].hands[hand_idx].bet;
+    this.players[player_idx].hands[hand_idx].result = "WIN";
   }
 
   private win_bj(player_idx: number, hand_idx: number): void {
     this.players[player_idx].balance += Math.round(
       2.5 * this.players[player_idx].hands[hand_idx].bet,
     );
+    this.players[player_idx].hands[hand_idx].result = "BLACKJACK";
   }
 
   private push(player_idx: number, hand_idx: number): void {
     this.players[player_idx].balance +=
       this.players[player_idx].hands[hand_idx].bet;
+    this.players[player_idx].hands[hand_idx].result = "PUSH";
   }
   private insurance_payout(player_idx: number, hand_idx: number): void {
     this.players[player_idx].balance += Math.round(
@@ -497,9 +500,12 @@ export class Game {
         let points = this.players[i].hands[j].points;
         const isPlayerBJ = this.is_blackjack(i, j);
         const isHandInsured = this.players[i].hands[j].is_insured;
+
         if (this.is_dealer_blackjack()) {
           if (isPlayerBJ) {
             this.push(i, j);
+          } else {
+             this.players[i].hands[j].result = "LOSE";
           }
           if (isHandInsured) {
             this.insurance_payout(i, j);
@@ -507,22 +513,28 @@ export class Game {
           continue;
         }
 
-        if (isPlayerBJ && !this.is_dealer_blackjack()) {
+        if (isPlayerBJ) {
           this.win_bj(i, j);
           continue;
         }
 
-        if (this.dealer.points <= 21) {
-          if (points > 21) {
-          } else if (points > this.dealer.points) {
+        if (points > 21) {
+          this.players[i].hands[j].result = "BUST";
+          continue;
+        }
+
+        if (this.dealer.points > 21) {
             this.win(i, j);
-          } else if (points === this.dealer.points) {
+            continue;
+        }
+
+        // Neither bust, no BJ involved
+        if (points > this.dealer.points) {
+            this.win(i, j);
+        } else if (points === this.dealer.points) {
             this.push(i, j);
-          }
         } else {
-          if (points <= 21) {
-            this.win(i, j);
-          }
+            this.players[i].hands[j].result = "LOSE";
         }
       }
     }
@@ -554,6 +566,7 @@ export class Game {
       this.players[i].hands[0].points = 0;
       this.players[i].hands[0].number_of_full_aces = 0;
       this.players[i].hands[0].bet = 0;
+      this.players[i].hands[0].result = undefined;
       if (this.players[i].hands.length > 1) {
         this.players[i].hands.splice(1);
       }
