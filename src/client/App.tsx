@@ -27,6 +27,7 @@ function App() {
   const [deadline, setDeadline] = useState<number | null>(null);
   const [showRejoinDialog, setShowRejoinDialog] = useState(false);
   const [kickedRoomId, setKickedRoomId] = useState<string | null>(null);
+  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 
   const handleLoginResponse = (data: LoginResponse) => {
     console.log("Login response:", data);
@@ -69,6 +70,7 @@ function App() {
       console.log("Kicked from room:", data);
       setGameState(null);
       setDeadline(null);
+      setCurrentRoomId(null);
 
       if (data.reason === "removed") {
         setKickedRoomId(data.room_id);
@@ -143,12 +145,14 @@ function App() {
   };
 
   const handleJoinGame = (gameId: string) => {
+    setCurrentRoomId(gameId);
     const req: RoomRequest = { id: gameId };
     socket.emit("join_game", req);
   };
 
   const handleRejoinGame = () => {
     if (kickedRoomId) {
+      setCurrentRoomId(kickedRoomId);
       const req: RoomRequest = { id: kickedRoomId };
       socket.emit("join_game", req);
       setShowRejoinDialog(false);
@@ -163,9 +167,15 @@ function App() {
   };
 
   const handleExitGame = () => {
+    if (currentRoomId) {
+      const req: RoomRequest = { id: currentRoomId };
+      socket.emit("leave_game", req);
+    }
     setView("lobby");
-    // Optionally emit a leave room event if server supports it
-    socket.emit("leave_game");
+    setGameState(null);
+    setDeadline(null);
+    setCurrentRoomId(null);
+    console.log("leaved");
   };
 
   // --- Render ---
