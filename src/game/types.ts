@@ -26,7 +26,6 @@ export interface Dealer {
 export interface Turn {
   player_idx: number;
   hand_idx: number;
-  timestamp: number;
   validMoves: Action[];
 }
 export enum PlayerState {

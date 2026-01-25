@@ -2,7 +2,6 @@ import * as GameTypes from "./types";
 import { Action } from "../shared/types";
 import { logger } from "@shared/logger";
 // prettier-ignore
-export const d = new Date();
 function createDecks(numberOfDecks: number = 4): GameTypes.Card[] {
   const deck: GameTypes.Card[] = [];
   const SUITS = ["hearts", "diamonds", "spades", "clubs"];
@@ -55,13 +54,11 @@ function shuffle(deck: GameTypes.Card[]): GameTypes.Card[] {
 export class Turn implements GameTypes.Turn {
   public player_idx: number;
   public hand_idx: number;
-  public timestamp: number;
   public validMoves: Action[];
 
   constructor() {
     this.player_idx = 0;
     this.hand_idx = 0;
-    this.timestamp = Date.now();
     this.validMoves = [];
   }
 }
@@ -145,29 +142,35 @@ export class Game {
   }
 
   public double(): void {
-    this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet *= 2;
+    const player_idx = this.turn.player_idx;
+    const hand_idx = this.turn.hand_idx;
+    this.players[player_idx].balance-=(this.players[player_idx].hands[hand_idx].bet)
+    this.players[player_idx].hands[hand_idx].bet *= 2;
     this.draw_card();
     this.next_turn();
   }
   public split(): void {
+    const player_idx = this.turn.player_idx;
+    const hand_idx = this.turn.hand_idx;
     let nb_of_aces = 0;
     let card =
-      this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.pop();
+      this.players[player_idx].hands[hand_idx].cards.pop();
 
     if (card) {
-      this.players[this.turn.player_idx].hands[this.turn.hand_idx].points =
+      this.players[player_idx].hands[hand_idx].points =
         card.point;
+      this.players[player_idx].balance-=this.players[player_idx].hands[hand_idx].bet
       if (card.rank === "ace") {
         nb_of_aces++;
       }
       let newHand: GameTypes.Hand = {
-        bet: this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet,
+        bet: this.players[player_idx].hands[hand_idx].bet,
         cards: [card],
         points: card.point,
         number_of_full_aces: nb_of_aces,
         is_insured: false,
       };
-      this.players[this.turn.player_idx].hands.push(newHand);
+      this.players[player_idx].hands.push(newHand);
     }
     this.draw_card(); //fixed split logic
   }
@@ -179,11 +182,13 @@ export class Game {
     }
   }
   public insurance(decision: boolean): void {
+    const player_idx = this.turn.player_idx;
+    const hand_idx = this.turn.hand_idx;
     if (decision === true) {
-      this.players[this.turn.player_idx].balance -= Math.round(
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet / 2,
+      this.players[player_idx].balance -= Math.round(
+        this.players[player_idx].hands[hand_idx].bet / 2,
       );
-      this.players[this.turn.player_idx].hands[this.turn.hand_idx].is_insured =
+      this.players[player_idx].hands[hand_idx].is_insured =
         true;
     }
     this.next_insurance_turn();
@@ -233,10 +238,10 @@ export class Game {
   }
 
   public get_current_player_nick(): string {
-    let idx: number = this.turn.player_idx;
-    let player: Player = this.players[idx];
+    const player_idx = this.turn.player_idx;
+    let player: Player = this.players[player_idx];
     if (player === undefined || player === null) {
-      logger.error(`Player at index ${idx} is undefined, total players: [${this.players.length}]`);
+      logger.error(`Player at index ${player_idx} is undefined, total players: [${this.players.length}]`);
       return "";
     } else {
       return player.nick;
@@ -285,26 +290,28 @@ export class Game {
   }
 
   private draw_card(): void {
+    const player_idx = this.turn.player_idx;
+    const hand_idx = this.turn.hand_idx;
     let card = this.deck.pop();
     if (card) {
       if (card.rank === "ace") {
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx]
+        this.players[player_idx].hands[hand_idx]
           .number_of_full_aces++;
       }
-      this.players[this.turn.player_idx].hands[this.turn.hand_idx].cards.push(
+      this.players[player_idx].hands[hand_idx].cards.push(
         card,
       );
-      this.players[this.turn.player_idx].hands[this.turn.hand_idx].points +=
+      this.players[player_idx].hands[hand_idx].points +=
         card.point;
       if (
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx]
+        this.players[player_idx].hands[hand_idx]
           .number_of_full_aces > 0 &&
         this.is_bust()
       ) {
 
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx].points -=
+        this.players[player_idx].hands[hand_idx].points -=
           10;
-        this.players[this.turn.player_idx].hands[this.turn.hand_idx]
+        this.players[player_idx].hands[hand_idx]
           .number_of_full_aces--;
       }
     }
@@ -318,7 +325,7 @@ export class Game {
       if (card.rank === "ace") {
         this.dealer.number_of_full_aces++;
       }
-      if (this.dealer.points > 21) {
+      if (this.dealer.points > 21 && this.dealer.number_of_full_aces>0) {
         this.dealer.points -= 10;
         this.dealer.number_of_full_aces--;
       }
@@ -361,9 +368,13 @@ export class Game {
     if (this.dealer.cards[0].rank === "ace") {
       this.turn.validMoves = [Action.INSURANCE];
       return;
-    } else if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
-      this.turn.validMoves = [Action.STAND];
-    } else this.turn.validMoves = this.valid_moves();
+    } else {
+      const player_idx = this.turn.player_idx;
+      const hand_idx = this.turn.hand_idx;
+      if (this.is_blackjack(player_idx, hand_idx)) {
+        this.turn.validMoves = [Action.STAND];
+      } else this.turn.validMoves = this.valid_moves();
+    }
   }
   private next_insurance_turn(): void {
 
@@ -371,7 +382,6 @@ export class Game {
       this.turn.player_idx = 0;
       this.turn.hand_idx = 0;
       this.turn.validMoves = [];
-      this.turn.timestamp = Date.now();
       let card = this.deck.pop();
       if (card) {
         if (card?.point === 10) {
@@ -407,10 +417,11 @@ export class Game {
     }
   }
   private next_turn(): void {
-    this.turn.timestamp = Date.now();
+    const player_idx = this.turn.player_idx;
+    const hand_idx = this.turn.hand_idx;
     if (
-      this.players[this.turn.player_idx].hands.length ===
-      this.turn.hand_idx + 1
+      this.players[player_idx].hands.length ===
+      hand_idx + 1
     ) {
       if (this.players.length === this.turn.player_idx + 1) {
         this.turn.player_idx++;
@@ -463,6 +474,7 @@ export class Game {
   }
 
   private valid_moves(): Action[] {
+    const bet = this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet
     let validm = [Action.HIT, Action.STAND];
     const player = this.players[this.turn.player_idx];
     if (!player) return [];
@@ -470,10 +482,10 @@ export class Game {
     if (cards.length > 2) {
       return validm;
     }
-    if (cards.length == 2) {
+    if (cards.length == 2 && this.players[this.turn.player_idx].balance >=bet) {
       validm.push(Action.DOUBLE);
     }
-    if (cards.length === 2 && cards[0].rank === cards[1].rank) {
+    if (cards.length === 2 && cards[0].rank === cards[1].rank && this.players[this.turn.player_idx].balance >=bet) {
       validm.push(Action.SPLIT);
     }
     logger.debug(`valid moves: ${validm}`);
