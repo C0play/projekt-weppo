@@ -148,7 +148,6 @@ export class Game {
     const bet_amount = this.players[player_idx].hands[hand_idx].bet;
 
     this.players[player_idx].balance -= bet_amount;
-    // Track the cost of doubling
     this.players[player_idx].hands[hand_idx].balance_change -= bet_amount;
 
     this.players[player_idx].hands[hand_idx].bet *= 2;
@@ -168,9 +167,7 @@ export class Game {
 
       const bet_amount = this.players[player_idx].hands[hand_idx].bet;
       this.players[player_idx].balance -= bet_amount;
-      // Note: The original hand already has its initial bet subtracted. 
-      // We only track the cost for the new hand here, or we can handle it at newHand creation.
-      // However, since strictly `balance_change` is per hand, the new hand starts fresh.
+
 
       if (card.rank === "ace") {
         nb_of_aces++;
@@ -181,7 +178,7 @@ export class Game {
         points: card.point,
         number_of_full_aces: nb_of_aces,
         is_insured: false,
-        // The new hand costs 'bet_amount' to create
+
         balance_change: -bet_amount,
       };
       this.players[player_idx].hands.push(newHand);
