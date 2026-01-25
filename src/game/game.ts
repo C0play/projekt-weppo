@@ -218,10 +218,17 @@ export class Game {
       return;
     }
     if (this.game_phase === GameTypes.GamePhase.PLAYING) {
-      logger.debug(`Changing game phase to BETTING`);
+      //should not happen
+      logger.warn(`Direct change from PLAYING to BETTING requested - skipping RESULTS phase.`);
       this.game_phase = GameTypes.GamePhase.BETTING;
       this.new_game();
       return;
+    }
+    if (this.game_phase === GameTypes.GamePhase.RESULTS) {
+        logger.debug(`Changing game phase to BETTING`);
+        this.game_phase = GameTypes.GamePhase.BETTING;
+        this.new_game();
+        return;
     }
   }
 
@@ -466,17 +473,20 @@ export class Game {
   private win(player_idx: number, hand_idx: number): void {
     this.players[player_idx].balance +=
       2 * this.players[player_idx].hands[hand_idx].bet;
+    this.players[player_idx].hands[hand_idx].result = "WIN";
   }
 
   private win_bj(player_idx: number, hand_idx: number): void {
     this.players[player_idx].balance += Math.round(
       2.5 * this.players[player_idx].hands[hand_idx].bet,
     );
+    this.players[player_idx].hands[hand_idx].result = "BLACKJACK";
   }
 
   private push(player_idx: number, hand_idx: number): void {
     this.players[player_idx].balance +=
       this.players[player_idx].hands[hand_idx].bet;
+    this.players[player_idx].hands[hand_idx].result = "PUSH";
   }
   private insurance_payout(player_idx: number, hand_idx: number): void {
     this.players[player_idx].balance += Math.round(
@@ -490,9 +500,12 @@ export class Game {
         let points = this.players[i].hands[j].points;
         const isPlayerBJ = this.is_blackjack(i, j);
         const isHandInsured = this.players[i].hands[j].is_insured;
+
         if (this.is_dealer_blackjack()) {
           if (isPlayerBJ) {
             this.push(i, j);
+          } else {
+             this.players[i].hands[j].result = "LOSE";
           }
           if (isHandInsured) {
             this.insurance_payout(i, j);
@@ -500,22 +513,28 @@ export class Game {
           continue;
         }
 
-        if (isPlayerBJ && !this.is_dealer_blackjack()) {
+        if (isPlayerBJ) {
           this.win_bj(i, j);
           continue;
         }
 
-        if (this.dealer.points <= 21) {
-          if (points > 21) {
-          } else if (points > this.dealer.points) {
+        if (points > 21) {
+          this.players[i].hands[j].result = "BUST";
+          continue;
+        }
+
+        if (this.dealer.points > 21) {
             this.win(i, j);
-          } else if (points === this.dealer.points) {
+            continue;
+        }
+
+        // Neither bust, no BJ involved
+        if (points > this.dealer.points) {
+            this.win(i, j);
+        } else if (points === this.dealer.points) {
             this.push(i, j);
-          }
         } else {
-          if (points <= 21) {
-            this.win(i, j);
-          }
+            this.players[i].hands[j].result = "LOSE";
         }
       }
     }
@@ -523,16 +542,17 @@ export class Game {
 
   private play_dealer(): void {
     if (this.is_dealer_blackjack()) {
-      logger.debug("dealer wins with blackjack, changing game phase to BETTING");
+      logger.debug("dealer wins with blackjack, changing game phase to RESULTS");
       this.update_balances();
-      this.change_game_phase();
+      this.game_phase = GameTypes.GamePhase.RESULTS;
       return;
     }
     while (this.dealer.points < 17) {
       this.draw_dealer();
     }
     this.update_balances();
-    this.change_game_phase();
+    logger.debug("Dealer finished turn, changing game phase to RESULTS");
+    this.game_phase = GameTypes.GamePhase.RESULTS;
   }
 
   private new_game(): void {
@@ -546,6 +566,7 @@ export class Game {
       this.players[i].hands[0].points = 0;
       this.players[i].hands[0].number_of_full_aces = 0;
       this.players[i].hands[0].bet = 0;
+      this.players[i].hands[0].result = undefined;
       if (this.players[i].hands.length > 1) {
         this.players[i].hands.splice(1);
       }

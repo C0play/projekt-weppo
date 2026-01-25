@@ -61,6 +61,8 @@ export default function GameView({ socket, gameState, nick, deadline, onExit }: 
               isCurrentUser={player.nick === nick}
               style={getPlayerStyle(index, gameState.players.length)}
               activeHandIndex={gameState.turn.player_idx === player.player_idx ? gameState.turn.hand_idx : undefined}
+              gamePhase={gameState.game_phase}
+              dealer={gameState.dealer}
             />
           ))}
         </div>

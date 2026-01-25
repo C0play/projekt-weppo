@@ -92,3 +92,99 @@
       0 0 35px #ff0000;
   }
 }
+
+/* --- Results Styles --- */
+
+.player-section.result-win {
+  border-color: #00ff00;
+  box-shadow: 0 0 20px rgba(0, 255, 0, 0.6);
+  background: rgba(0, 40, 0, 0.6);
+}
+
+.player-section.result-loss {
+  border-color: #ff0000;
+  box-shadow: 0 0 20px rgba(255, 0, 0, 0.6);
+  background: rgba(40, 0, 0, 0.6);
+}
+
+.player-section.result-push {
+  border-color: #ffff00;
+  box-shadow: 0 0 20px rgba(255, 255, 0, 0.6);
+  background: rgba(40, 40, 0, 0.6);
+}
+
+.player-section.result-blackjack {
+  border-color: #ffd700;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+  background: rgba(60, 50, 0, 0.7);
+  animation: borderPulse 2s infinite;
+}
+
+@keyframes borderPulse {
+  0% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(255, 215, 0, 0.9);
+  }
+  100% {
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  }
+}
+
+.result-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-10deg);
+  font-size: 2rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border: 4px solid;
+  border-radius: 10px;
+  z-index: 100;
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  pointer-events: none; /* Let clicks pass through */
+}
+
+.result-badge.result-win {
+  color: #00ff00;
+  border-color: #00ff00;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.result-badge.result-loss {
+  color: #ff0000;
+  border-color: #ff0000;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.result-badge.result-push {
+  color: #ffff00;
+  border-color: #ffff00;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.result-badge.result-blackjack {
+  color: #ffd700;
+  border-color: #ffd700;
+  background-color: rgba(0, 0, 0, 0.9);
+  text-shadow: 0 0 10px #ffd700;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+  font-size: 2.5rem; /* Make it POP! */
+  z-index: 101;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.1) rotate(-45deg);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(-10deg);
+  }
+}

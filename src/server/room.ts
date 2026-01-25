@@ -73,6 +73,23 @@ export class Room {
         }
         logger.debug(`Requesting action in room ${this.id}. Current phase: ${this.game.game_phase}`);
 
+        // ==================== RESULTS ====================
+        if (this.game.game_phase === GamePhase.RESULTS) {
+            logger.info(`Phase: RESULTS. Displaying results for 5000ms.`);
+
+            this.set_timeout(
+                5000,
+                () => {
+                    this.clear_timeout();
+                    this.game.change_game_phase();
+                    this.request_action();
+                }
+            );
+
+            this.emit_game_state();
+            return;
+        }
+
         // ==================== BETTING ====================
         if (this.game.game_phase === GamePhase.BETTING) {
             logger.info(`Phase: BETTING. Waiting for bets from ${this.users.size} users.`);

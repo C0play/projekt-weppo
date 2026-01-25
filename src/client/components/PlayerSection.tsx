@@ -1,6 +1,6 @@
 import { CSSProperties, useEffect, useState } from "react";
 import Card from "./Card";
-import { Player } from "../../game/types";
+import { Player, GamePhase, GameState } from "../../game/types";
 import "./PlayerSection.css";
 
 interface PlayerSectionProps {
@@ -8,9 +8,11 @@ interface PlayerSectionProps {
   isCurrentUser: boolean;
   style?: CSSProperties;
   activeHandIndex?: number;
+  gamePhase: GamePhase;
+  dealer: GameState["dealer"];
 }
 
-const PlayerSection = ({ player, isCurrentUser, style, activeHandIndex }: PlayerSectionProps) => {
+const PlayerSection = ({ player, isCurrentUser, style, activeHandIndex, gamePhase, dealer }: PlayerSectionProps) => {
   const [selectedHandIdx, setSelectedHandIdx] = useState(0);
 
   // If this player is currently playing, switch to the active hand automatically
@@ -38,8 +40,28 @@ const PlayerSection = ({ player, isCurrentUser, style, activeHandIndex }: Player
   const isAllIn = player.balance === 0 && currentHand.bet > 0;
   const hasMultipleHands = player.hands.length > 1;
 
+  // --- Result Logic for RESULTS phase ---
+  let resultClass = "";
+  let resultText = "";
+
+  if (gamePhase === GamePhase.RESULTS && currentHand.result) {
+    const res = currentHand.result;
+    resultText = res;
+
+    if (res === "BLACKJACK") {
+      resultClass = "result-blackjack";
+    } else if (res === "WIN") {
+      resultClass = "result-win";
+    } else if (res === "PUSH") {
+      resultClass = "result-push";
+    } else {
+      resultClass = "result-loss";
+    }
+  }
+
   return (
-    <div className={`player-section ${isCurrentUser ? "current-user" : ""}`} style={style}>
+    <div className={`player-section ${isCurrentUser ? "current-user" : ""} ${resultClass}`} style={style}>
+      {resultText && <div className={`result-badge ${resultClass}`}>{resultText}</div>}
       <h2>
         {player.nick} {isCurrentUser ? "(You)" : ""}
       </h2>
