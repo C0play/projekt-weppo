@@ -1,5 +1,7 @@
 
 import { Socket } from "socket.io";
+import { ActionRequest, KickMessage } from "../shared/types";
+import { logger } from "@shared/logger";
 
 export class User {
     public socket: Socket;
@@ -16,7 +18,17 @@ export class User {
         this.nick = nick;
     }
 
-    send(event: string, data: any): void {
+    public send_kick_message(data: KickMessage) {
+        this.send("kick", data);
+        logger.debug(`Sent kick message to ${this.nick}`);
+    }
+
+    public send_action_request(data: ActionRequest) {
+        this.send("your_turn", data);
+        logger.debug(`Sent bet request to ${this.nick}`);
+    }
+
+    public send(event: string, data: any): void {
         this.socket.emit(event, data);
     }
 }

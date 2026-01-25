@@ -424,7 +424,7 @@ export class Game {
     if (cards.length === 2 && cards[0].rank === cards[1].rank) {
       validm.push(Action.SPLIT);
     }
-    logger.debug(`valid moves: ${validm}`)
+    logger.debug(`valid moves: ${validm}`);
     return validm;
   }
 
@@ -514,7 +514,7 @@ export class Game {
 
   private play_dealer(): void {
     if (this.is_dealer_blackjack()) {
-      logger.debug("dealer wins with blackjack, changing game phase to BETTING")
+      logger.debug("dealer wins with blackjack, changing game phase to BETTING");
       this.update_balances();
       this.change_game_phase();
       return;

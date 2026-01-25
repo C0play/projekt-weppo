@@ -8,7 +8,7 @@ import { User } from "./user";
 import {
   LoginRequest, LoginResponse,
   RoomRequest, RoomsResponse
-} from "./types";
+} from "../shared/types";
 import { logger } from "../shared/logger";
 import { Config } from "../shared/config";
 
@@ -183,6 +183,9 @@ io.on("connection", (socket: Socket) => {
     if (nick) {
       let user = users.get(nick);
       if (user) {
+        if (user.room_id !== null) {
+          user.send("error", `You are already in a room ${user.room_id}`);
+        }
         const room = rooms.get(room_info.id);
         if (room) {
           logger.info(`Player ${nick} joining room ${room_info.id}`);
