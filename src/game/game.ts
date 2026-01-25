@@ -218,10 +218,17 @@ export class Game {
       return;
     }
     if (this.game_phase === GameTypes.GamePhase.PLAYING) {
-      logger.debug(`Changing game phase to BETTING`);
+      //should not happen
+      logger.warn(`Direct change from PLAYING to BETTING requested - skipping RESULTS phase.`);
       this.game_phase = GameTypes.GamePhase.BETTING;
       this.new_game();
       return;
+    }
+    if (this.game_phase === GameTypes.GamePhase.RESULTS) {
+        logger.debug(`Changing game phase to BETTING`);
+        this.game_phase = GameTypes.GamePhase.BETTING;
+        this.new_game();
+        return;
     }
   }
 
@@ -523,16 +530,17 @@ export class Game {
 
   private play_dealer(): void {
     if (this.is_dealer_blackjack()) {
-      logger.debug("dealer wins with blackjack, changing game phase to BETTING");
+      logger.debug("dealer wins with blackjack, changing game phase to RESULTS");
       this.update_balances();
-      this.change_game_phase();
+      this.game_phase = GameTypes.GamePhase.RESULTS;
       return;
     }
     while (this.dealer.points < 17) {
       this.draw_dealer();
     }
     this.update_balances();
-    this.change_game_phase();
+    logger.debug("Dealer finished turn, changing game phase to RESULTS");
+    this.game_phase = GameTypes.GamePhase.RESULTS;
   }
 
   private new_game(): void {

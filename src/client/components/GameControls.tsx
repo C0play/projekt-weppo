@@ -17,23 +17,28 @@ export default function GameControls({ socket, gameState, nick, deadline }: Game
 
   const isMyTurn = gameState.players[gameState.turn.player_idx]?.nick === nick;
   const isBettingPhase = gameState.game_phase === GamePhase.BETTING;
+  const isResultsPhase = gameState.game_phase === GamePhase.RESULTS;
 
-  // Logic: Show controls if it's Betting Phase OR if it's My Turn
-  const showControls = isBettingPhase || isMyTurn;
+  // Logic: Show controls if it's Betting Phase OR if it's My Turn, but NEVER in Results
+  const showControls = (isBettingPhase || isMyTurn) && !isResultsPhase;
 
   const validMoves = gameState.turn.validMoves.map((m) => Action.toLowerCase(m));
 
   return (
     <div className="game-controls">
-      <div className={`turn-info ${isMyTurn ? "my-turn" : ""}`}>
+      <div className={`turn-info ${isMyTurn && !isResultsPhase ? "my-turn" : ""}`}>
         <h3>
-          {isBettingPhase
-            ? "Place your bets!"
-            : isMyTurn
-              ? "It's your turn!"
-              : `Current turn: ${gameState.players[gameState.turn.player_idx]?.nick || "Unknown"}`}
+          {isResultsPhase
+            ? "Round Over - Preparing new game..."
+            : isBettingPhase
+              ? "Place your bets!"
+              : isMyTurn
+                ? "It's your turn!"
+                : `Current turn: ${gameState.players[gameState.turn.player_idx]?.nick || "Unknown"}`}
         </h3>
-        <Timer key={deadline || "timer"} deadline={deadline} totalTime={isBettingPhase ? 20 : 10} />
+        {!isResultsPhase && (
+          <Timer key={deadline || "timer"} deadline={deadline} totalTime={isBettingPhase ? 20 : 10} />
+        )}
       </div>
 
       {showControls && (
