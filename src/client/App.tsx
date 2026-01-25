@@ -165,7 +165,7 @@ function App() {
   const handleExitGame = () => {
     setView("lobby");
     // Optionally emit a leave room event if server supports it
-    // socket.emit("leave_game");
+    socket.emit("leave_game");
   };
 
   // --- Render ---
