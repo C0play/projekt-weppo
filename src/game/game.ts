@@ -318,8 +318,6 @@ export class Game {
       if (card.rank === "ace") {
         this.dealer.number_of_full_aces++;
       }
-      this.dealer.cards.push(card);
-      this.dealer.points += card.point;
       if (this.dealer.points > 21) {
         this.dealer.points -= 10;
         this.dealer.number_of_full_aces--;
