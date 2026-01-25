@@ -376,6 +376,7 @@ export class Game {
       if (card) {
         if (card?.point === 10) {
           this.dealer.cards.push(card);
+          this.dealer.points += 10;
         }
         else {
           this.deck.unshift(card);
@@ -531,6 +532,9 @@ export class Game {
 
   private update_balances(): void {
     for (let i = 0; i < this.number_of_players; i++) {
+      if (this.players[i].player_state === GameTypes.PlayerState.INACTIVE || this.players[i].player_state === GameTypes.PlayerState.SPECTATING) {
+        continue;
+      }
       for (let j = 0; j < this.players[i].hands.length; j++) {
         let points = this.players[i].hands[j].points;
         const isPlayerBJ = this.is_blackjack(i, j);
