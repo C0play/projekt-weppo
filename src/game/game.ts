@@ -344,19 +344,17 @@ export class Game {
           }
         }
       }
-      if (i === 0) {
-        let card = this.deck.pop();
+      let card = this.deck.pop();
 
-        if (card) {
-          if (card.rank === "ace") {
-            this.dealer.number_of_full_aces++;
-          }
-          this.dealer.cards.push(card);
-          this.dealer.points += card.point;
-          if (this.dealer.points === 22) {
-            this.dealer.points = 12;
-            this.dealer.number_of_full_aces--;
-          }
+      if (card) {
+        if (card.rank === "ace") {
+          this.dealer.number_of_full_aces++;
+        }
+        this.dealer.cards.push(card);
+        this.dealer.points += card.point;
+        if (this.dealer.points === 22) {
+          this.dealer.points = 12;
+          this.dealer.number_of_full_aces--;
         }
       }
     }
@@ -374,15 +372,6 @@ export class Game {
       this.turn.hand_idx = 0;
       this.turn.validMoves = [];
       this.turn.timestamp = Date.now();
-      let card = this.deck.pop();
-      if (card) {
-        if (card?.point === 10) {
-          this.dealer.cards.push(card);
-        }
-        else {
-          this.deck.unshift(card);
-        }
-      }
       if (this.is_dealer_blackjack()) {
         this.play_dealer();
       }
@@ -414,10 +403,6 @@ export class Game {
     ) {
       if (this.players.length === this.turn.player_idx + 1) {
         this.turn.player_idx++;
-        let card = this.deck.pop();
-        if (card) {
-          this.dealer.cards.push(card);
-        }
         this.play_dealer();
         return;
       } else {
@@ -439,7 +424,7 @@ export class Game {
       GameTypes.PlayerState.INACTIVE
     ) {
       this.stand();
-      return;
+      return; 
     }
     if (
       this.players[this.turn.player_idx].player_state ===
