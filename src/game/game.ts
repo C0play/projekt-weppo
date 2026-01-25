@@ -383,6 +383,7 @@ export class Game {
       }
       if (this.is_dealer_blackjack()) {
         this.play_dealer();
+        return;
       }
       else {
         if (this.is_blackjack(this.turn.player_idx, this.turn.hand_idx)) {
@@ -412,9 +413,18 @@ export class Game {
     ) {
       if (this.players.length === this.turn.player_idx + 1) {
         this.turn.player_idx++;
+
         let card = this.deck.pop();
         if (card) {
           this.dealer.cards.push(card);
+          this.dealer.points += card.point;
+          if (card.rank === "ace") {
+            this.dealer.number_of_full_aces++;
+          }
+          if (this.dealer.points > 21 && this.dealer.number_of_full_aces > 0) {
+            this.dealer.points -= 10;
+            this.dealer.number_of_full_aces--;
+          }
         }
         this.play_dealer();
         return;
