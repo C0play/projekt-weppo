@@ -11,21 +11,21 @@ import RejoinDialog from "./components/RejoinDialog";
 
 import { GameState as SharedGameState, GamePhase } from "../game/types";
 import { ActionRequest, KickMessage } from "../shared/types";
-import { Config } from "../shared/config";
 import { LoginRequest, LoginResponse, RoomRequest, RoomsResponse } from "../shared/types";
+import { REMOTE_SERVER_URL } from "../shared/config";
 
-// NOTE: Ideally socket should be in a separate context or service,
-// but sticking to existing pattern for this refactor.
-const socket: Socket = io("http://" + Config.CLIENT_IP + ":" + Config.CLIENT_PORT, { autoConnect: false });
+
+const socket: Socket = io(REMOTE_SERVER_URL, { autoConnect: false });
+
 
 function App() {
-  const [view, setView] = useState<"login" | "lobby" | "game">("login");
-  const [nick, setNick] = useState("");
-  const [gameIds, setGameIds] = useState<string[]>([]);
-  const [gameState, setGameState] = useState<SharedGameState | null>(null);
-  const [deadline, setDeadline] = useState<number | null>(null);
-  const [showRejoinDialog, setShowRejoinDialog] = useState(false);
-  const [kickedRoomId, setKickedRoomId] = useState<string | null>(null);
+  const [ view, setView ] = useState<"login" | "lobby" | "game">("login");
+  const [ nick, setNick ] = useState("");
+  const [ gameIds, setGameIds ] = useState<string[]>([]);
+  const [ gameState, setGameState ] = useState<SharedGameState | null>(null);
+  const [ deadline, setDeadline ] = useState<number | null>(null);
+  const [ showRejoinDialog, setShowRejoinDialog ] = useState(false);
+  const [ kickedRoomId, setKickedRoomId ] = useState<string | null>(null);
 
   const handleLoginResponse = (data: LoginResponse) => {
     console.log("Login response:", data);
@@ -59,7 +59,7 @@ function App() {
       console.log("Your turn!", data);
       setDeadline(data.end_timestamp);
     };
-    const handleError = (err: string | { msg: string }) => {
+    const handleError = (err: string | { msg: string; }) => {
       const msg = typeof err === "string" ? err : err.msg;
       alert(msg);
     };
@@ -111,13 +111,13 @@ function App() {
     if (!gameState || !nick) return;
 
     if (gameState.game_phase === GamePhase.PLAYING) {
-      const currentPlayer = gameState.players[gameState.turn.player_idx];
+      const currentPlayer = gameState.players[ gameState.turn.player_idx ];
       // If it's playing phase and NOT my turn, verify I don't have a lingering timer
       if (currentPlayer && currentPlayer.nick !== nick) {
         setDeadline((prev) => (prev !== null ? null : prev));
       }
     }
-  }, [gameState, nick]);
+  }, [ gameState, nick ]);
 
   // --- Callbacks for Child Components ---
 
