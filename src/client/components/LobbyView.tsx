@@ -3,14 +3,20 @@ import "./LobbyView.css";
 interface LobbyViewProps {
   nick: string;
   gameIds: string[];
+  balance: number;
   onCreateGame: () => void;
   onRefreshList: () => void;
   onJoinGame: (id: string) => void;
 }
 
-export default function LobbyView({ nick, gameIds, onCreateGame, onRefreshList, onJoinGame }: LobbyViewProps) {
+export default function LobbyView({ nick, gameIds, balance, onCreateGame, onRefreshList, onJoinGame }: LobbyViewProps) {
   return (
     <div className="lobby-container">
+      <div className="lobby-info">
+        <div className="balance-display">
+          Balance: <span className="money">${balance}</span>
+        </div>
+      </div>
       <h1>Lobby ({nick})</h1>
       <div className="lobby-controls">
         <button onClick={onCreateGame}>Create New Game</button>

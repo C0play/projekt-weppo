@@ -18,7 +18,7 @@ export class Room {
     private readonly TURN_TIME_LIMIT: number = 10e3;    // miliseconds
     private readonly BET_TIME_LIMIT: number = 20e3;     // miliseconds
     private readonly DEALER_CARD_DELAY: number = 0.5e3; // miliseconds per card reveal
-    private readonly RESULT_DISPLAY_TIME: number = 5e3; // miliseconds to display final results
+    private readonly RESULT_DISPLAY_TIME: number = 3e3; // miliseconds to display final results
 
     private users: Map<string, User> = new Map(); // nick -> user
     private timeout: NodeJS.Timeout | null = null;
@@ -183,6 +183,12 @@ export class Room {
         if (bet_amount === undefined) {
             this.logger.warn(`Player tried to bet without amount`, { nick: user.nick });
             user.send("error", "Trying to bet without specifying the amount");
+            return;
+        }
+
+        if (isNaN(bet_amount) || bet_amount <= 0) {
+            this.logger.warn(`Player tried to bet invalid amount: ${bet_amount}`, { nick: user.nick });
+            user.send("error", "Bet amount must be a positive number");
             return;
         }
 

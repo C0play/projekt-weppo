@@ -284,8 +284,18 @@ class GameServer {
     room.leave(user);
   }
 
-  private handle_user_info(socket: Socket, message: UserInfo) {
-    socket.emit("user_info", message);
+  private handle_user_info(socket: Socket, _message: UserInfo) {
+    const nick = this.sockets.get(socket.id);
+    if (!nick) {
+      send_error(socket, `You are not registered (${socket.id})`);
+      return;
+    }
+    const user = this.users.get(nick);
+    if (!user) {
+      send_error(socket, `User not found (${nick})`);
+      return;
+    }
+    socket.emit("user_info", { balance: user.balance });
   }
 }
 
