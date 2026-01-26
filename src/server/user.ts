@@ -11,6 +11,7 @@ export class User {
 
     public room_id: string | null = null;
     public active: boolean = true;
+    public balance: number = 1000;
 
     constructor(socket: Socket, nick: string) {
         this.socket = socket;

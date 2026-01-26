@@ -68,7 +68,7 @@ export class Player implements GameTypes.Player {
   public balance: number;
   public player_idx: number;
   public player_state: GameTypes.PlayerState;
-  constructor(nick: string) {
+  constructor(nick: string, balance: number) {
     this.nick = nick;
     this.hands = [
       {
@@ -80,7 +80,7 @@ export class Player implements GameTypes.Player {
         balance_change: 0,
       },
     ];
-    this.balance = 1000;
+    this.balance = balance;
     this.player_idx = 0;
     this.player_state = GameTypes.PlayerState.INACTIVE;
   }
@@ -105,12 +105,12 @@ export class Game {
   }
 
   //============================PUBLIC METHODS===================================================================
-  public connect_player(nick: string): boolean {
+  public connect_player(nick: string, balance: number): boolean {
 
     if (this.number_of_players + 1 > this.max_players) {
       return false;
     }
-    let player = new Player(nick);
+    let player = new Player(nick, balance);
     if (this.game_phase === GameTypes.GamePhase.BETTING) {
       player.player_state = GameTypes.PlayerState.ACTIVE;
     } else {
@@ -263,12 +263,15 @@ export class Game {
     }
   }
 
-  public remove_inactive_players(): string[] {
+  public remove_inactive_players(): { nick: string; balance: number; }[] {
     //call before change_phase from betting to playing
     let inactive_players = [];
     for (let i = 0; i < this.players.length; i++) {
       if (this.players[i].player_state === GameTypes.PlayerState.INACTIVE) {
-        inactive_players.push(this.players[i].nick);
+        inactive_players.push({
+          nick: this.players[i].nick,
+          balance: this.players[i].balance
+        });
         this.delete_player(i);
         i--;
       }
@@ -296,6 +299,11 @@ export class Game {
 
   public has_player(nick: string): boolean {
     return this.players.some(p => p.nick === nick);
+  }
+
+  public get_player_balance(nick: string): number {
+    const player = this.players.find(p => p.nick === nick);
+    return player ? player.balance : 0;
   }
 
   //================PRIVATE METHODS=============================================================================
@@ -490,7 +498,7 @@ export class Game {
   }
 
   private valid_moves(): Action[] {
-    const bet = this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet
+    const bet = this.players[this.turn.player_idx].hands[this.turn.hand_idx].bet;
     let validm = [Action.HIT, Action.STAND];
     const player = this.players[this.turn.player_idx];
     if (!player) return [];
