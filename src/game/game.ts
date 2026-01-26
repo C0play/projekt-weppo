@@ -77,6 +77,7 @@ export class Player implements GameTypes.Player {
         number_of_full_aces: 0,
         points: 0,
         is_insured: false,
+        balance_change: 0,
       },
     ];
     this.balance = 1000;
@@ -144,7 +145,11 @@ export class Game {
   public double(): void {
     const player_idx = this.turn.player_idx;
     const hand_idx = this.turn.hand_idx;
-    this.players[player_idx].balance-=(this.players[player_idx].hands[hand_idx].bet)
+    const bet_amount = this.players[player_idx].hands[hand_idx].bet;
+
+    this.players[player_idx].balance -= bet_amount;
+    this.players[player_idx].hands[hand_idx].balance_change -= bet_amount;
+
     this.players[player_idx].hands[hand_idx].bet *= 2;
     this.draw_card();
     this.next_turn();
@@ -159,16 +164,22 @@ export class Game {
     if (card) {
       this.players[player_idx].hands[hand_idx].points =
         card.point;
-      this.players[player_idx].balance-=this.players[player_idx].hands[hand_idx].bet
+
+      const bet_amount = this.players[player_idx].hands[hand_idx].bet;
+      this.players[player_idx].balance -= bet_amount;
+
+
       if (card.rank === "ace") {
         nb_of_aces++;
       }
       let newHand: GameTypes.Hand = {
-        bet: this.players[player_idx].hands[hand_idx].bet,
+        bet: bet_amount,
         cards: [card],
         points: card.point,
         number_of_full_aces: nb_of_aces,
         is_insured: false,
+
+        balance_change: -bet_amount,
       };
       this.players[player_idx].hands.push(newHand);
     }
@@ -185,9 +196,11 @@ export class Game {
     const player_idx = this.turn.player_idx;
     const hand_idx = this.turn.hand_idx;
     if (decision === true) {
-      this.players[player_idx].balance -= Math.round(
-        this.players[player_idx].hands[hand_idx].bet / 2,
-      );
+      const insurance_cost = Math.round(this.players[player_idx].hands[hand_idx].bet / 2);
+      this.players[player_idx].balance -= insurance_cost;
+      // Track cost of insurance
+      this.players[player_idx].hands[hand_idx].balance_change -= insurance_cost;
+
       this.players[player_idx].hands[hand_idx].is_insured =
         true;
     }
@@ -204,6 +217,8 @@ export class Game {
         if (this.players[i].balance >= bet_amount) {
           this.players[i].balance -= bet_amount;
           this.players[i].hands[0].bet = bet_amount;
+          // Initial bet cost
+          this.players[i].hands[0].balance_change = -bet_amount;
           return true;
         } else {
           return false;
@@ -325,7 +340,7 @@ export class Game {
       if (card.rank === "ace") {
         this.dealer.number_of_full_aces++;
       }
-      if (this.dealer.points > 21 && this.dealer.number_of_full_aces>0) {
+      if (this.dealer.points > 21 && this.dealer.number_of_full_aces > 0) {
         this.dealer.points -= 10;
         this.dealer.number_of_full_aces--;
       }
@@ -482,10 +497,10 @@ export class Game {
     if (cards.length > 2) {
       return validm;
     }
-    if (cards.length == 2 && this.players[this.turn.player_idx].balance >=bet) {
+    if (cards.length == 2 && this.players[this.turn.player_idx].balance >= bet) {
       validm.push(Action.DOUBLE);
     }
-    if (cards.length === 2 && cards[0].rank === cards[1].rank && this.players[this.turn.player_idx].balance >=bet) {
+    if (cards.length === 2 && cards[0].rank === cards[1].rank && this.players[this.turn.player_idx].balance >= bet) {
       validm.push(Action.SPLIT);
     }
     logger.debug(`valid moves: ${validm}`);
@@ -519,27 +534,33 @@ export class Game {
   }
 
   private win(player_idx: number, hand_idx: number): void {
-    this.players[player_idx].balance +=
-      2 * this.players[player_idx].hands[hand_idx].bet;
+    const amount = 2 * this.players[player_idx].hands[hand_idx].bet;
+    this.players[player_idx].balance += amount;
     this.players[player_idx].hands[hand_idx].result = "WIN";
+    this.players[player_idx].hands[hand_idx].balance_change += amount;
   }
 
   private win_bj(player_idx: number, hand_idx: number): void {
-    this.players[player_idx].balance += Math.round(
+    const amount = Math.round(
       2.5 * this.players[player_idx].hands[hand_idx].bet,
     );
+    this.players[player_idx].balance += amount;
     this.players[player_idx].hands[hand_idx].result = "BLACKJACK";
+    this.players[player_idx].hands[hand_idx].balance_change += amount;
   }
 
   private push(player_idx: number, hand_idx: number): void {
-    this.players[player_idx].balance +=
-      this.players[player_idx].hands[hand_idx].bet;
+    const amount = this.players[player_idx].hands[hand_idx].bet;
+    this.players[player_idx].balance += amount;
     this.players[player_idx].hands[hand_idx].result = "PUSH";
+    this.players[player_idx].hands[hand_idx].balance_change += amount;
   }
   private insurance_payout(player_idx: number, hand_idx: number): void {
-    this.players[player_idx].balance += Math.round(
+    const amount = Math.round(
       1.5 * this.players[player_idx].hands[hand_idx].bet,
     );
+    this.players[player_idx].balance += amount;
+    this.players[player_idx].hands[hand_idx].balance_change += amount;
   }
 
   private update_balances(): void {
@@ -548,6 +569,7 @@ export class Game {
         continue;
       }
       for (let j = 0; j < this.players[i].hands.length; j++) {
+
         let points = this.players[i].hands[j].points;
         const isPlayerBJ = this.is_blackjack(i, j);
         const isHandInsured = this.players[i].hands[j].is_insured;
@@ -578,8 +600,6 @@ export class Game {
           this.win(i, j);
           continue;
         }
-
-        // Neither bust, no BJ involved
         if (points > this.dealer.points) {
           this.win(i, j);
         } else if (points === this.dealer.points) {
@@ -618,6 +638,7 @@ export class Game {
       this.players[i].hands[0].number_of_full_aces = 0;
       this.players[i].hands[0].bet = 0;
       this.players[i].hands[0].result = undefined;
+      this.players[i].hands[0].balance_change = 0;
       if (this.players[i].hands.length > 1) {
         this.players[i].hands.splice(1);
       }
