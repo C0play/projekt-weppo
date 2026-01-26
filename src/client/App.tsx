@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { io, Socket } from "socket.io-client";
 
 import "./App.css";
 
@@ -11,12 +10,10 @@ import RejoinDialog from "./components/RejoinDialog";
 
 import { GameState as SharedGameState, GamePhase } from "../game/types";
 import { ActionRequest, KickMessage } from "../shared/types";
-import { Config } from "../shared/config";
 import { LoginRequest, LoginResponse, RoomRequest, RoomsResponse } from "../shared/types";
 
-// NOTE: Ideally socket should be in a separate context or service,
-// but sticking to existing pattern for this refactor.
-const socket: Socket = io("http://" + Config.CLIENT_IP + ":" + Config.CLIENT_PORT, { autoConnect: false });
+// NOTE: socket instance is provided from `src/client/socket.ts` which uses `src/shared/config.ts`
+import { socket } from "./socket";
 
 function App() {
   const [view, setView] = useState<"login" | "lobby" | "game">("login");
