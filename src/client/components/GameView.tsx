@@ -39,7 +39,7 @@ export default function GameView({ socket, gameState, nick, deadline, onExit }: 
           EXIT ROOM
         </button>
         <div className="room-info">
-          <div>Room: Active Game</div>
+          {/*  <div>Room: {curr_room_id}</div> */}
           <div className="balance-info">
             Balance: <span className="money">${currentBalance}</span>
           </div>
