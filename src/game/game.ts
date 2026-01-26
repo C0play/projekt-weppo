@@ -404,7 +404,7 @@ export class Game {
           this.dealer.points += 10;
         }
         else {
-          this.deck.unshift(card);
+          this.deck.push(card);
         }
       }
       if (this.is_dealer_blackjack()) {
@@ -434,10 +434,7 @@ export class Game {
   private next_turn(): void {
     const player_idx = this.turn.player_idx;
     const hand_idx = this.turn.hand_idx;
-    if (
-      this.players[player_idx].hands.length ===
-      hand_idx + 1
-    ) {
+    if (this.players[player_idx].hands.length === hand_idx + 1) {
       if (this.players.length === this.turn.player_idx + 1) {
         this.turn.player_idx++;
 
@@ -575,7 +572,7 @@ export class Game {
         const isHandInsured = this.players[i].hands[j].is_insured;
 
         if (this.is_dealer_blackjack()) {
-          if (isPlayerBJ) {
+          if (isPlayerBJ || points === 21) {
             this.push(i, j);
           } else {
             this.players[i].hands[j].result = "LOSE";
