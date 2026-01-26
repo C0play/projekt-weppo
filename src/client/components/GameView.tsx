@@ -1,6 +1,7 @@
 import { Socket } from "socket.io-client";
-import { GameState } from "../../game/types";
+import { GameState, GamePhase } from "../../game/types";
 import Card from "./Card";
+import CardBack from "./CardBack";
 import PlayerSection from "./PlayerSection";
 import GameControls from "./GameControls";
 import "./GameView.css";
@@ -50,6 +51,9 @@ export default function GameView({ socket, gameState, nick, deadline, onExit }: 
             {gameState.dealer.cards.map((card, index) => (
               <Card key={index} card={card} />
             ))}
+            {gameState.game_phase === GamePhase.PLAYING && gameState.dealer.cards.length >= 1 && (
+              <CardBack key="hidden" />
+            )}
           </div>
         </div>
 
