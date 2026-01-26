@@ -10,9 +10,18 @@ interface PlayerSectionProps {
   activeHandIndex?: number;
   gamePhase: GamePhase;
   dealer: GameState["dealer"];
+  showResults?: boolean;
 }
 
-const PlayerSection = ({ player, isCurrentUser, style, activeHandIndex, gamePhase, dealer }: PlayerSectionProps) => {
+const PlayerSection = ({
+  player,
+  isCurrentUser,
+  style,
+  activeHandIndex,
+  gamePhase,
+  dealer,
+  showResults = false,
+}: PlayerSectionProps) => {
   const [selectedHandIdx, setSelectedHandIdx] = useState(0);
 
   // If this player is currently playing, switch to the active hand automatically
@@ -44,7 +53,7 @@ const PlayerSection = ({ player, isCurrentUser, style, activeHandIndex, gamePhas
   let resultClass = "";
   let resultText = "";
 
-  if (gamePhase === GamePhase.RESULTS && currentHand.result) {
+  if (gamePhase === GamePhase.RESULTS && showResults && currentHand.result) {
     const res = currentHand.result;
     resultText = res;
 
