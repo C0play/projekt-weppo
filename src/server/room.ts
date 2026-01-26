@@ -18,7 +18,7 @@ export class Room {
     private readonly TURN_TIME_LIMIT: number = 10e3;    // miliseconds
     private readonly BET_TIME_LIMIT: number = 20e3;     // miliseconds
     private readonly DEALER_CARD_DELAY: number = 0.5e3; // miliseconds per card reveal
-    private readonly RESULT_DISPLAY_TIME: number = 5e3; // miliseconds to display final results
+    private readonly RESULT_DISPLAY_TIME: number = 3e3; // miliseconds to display final results
 
     private users: Map<string, User> = new Map(); // nick -> user
     private timeout: NodeJS.Timeout | null = null;

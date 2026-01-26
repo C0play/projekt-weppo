@@ -14,18 +14,17 @@ import { ActionRequest, KickMessage } from "../shared/types";
 import { LoginRequest, LoginResponse, RoomRequest, RoomsResponse } from "../shared/types";
 import { REMOTE_SERVER_URL } from "../shared/config";
 
-
 const socket: Socket = io(REMOTE_SERVER_URL, { autoConnect: false });
 
-
 function App() {
-  const [ view, setView ] = useState<"login" | "lobby" | "game">("login");
-  const [ nick, setNick ] = useState("");
-  const [ gameIds, setGameIds ] = useState<string[]>([]);
-  const [ gameState, setGameState ] = useState<SharedGameState | null>(null);
-  const [ deadline, setDeadline ] = useState<number | null>(null);
-  const [ showRejoinDialog, setShowRejoinDialog ] = useState(false);
-  const [ kickedRoomId, setKickedRoomId ] = useState<string | null>(null);
+  const [view, setView] = useState<"login" | "lobby" | "game">("login");
+  const [nick, setNick] = useState("");
+  const [gameIds, setGameIds] = useState<string[]>([]);
+  const [balance, setBalance] = useState<number>(0);
+  const [gameState, setGameState] = useState<SharedGameState | null>(null);
+  const [deadline, setDeadline] = useState<number | null>(null);
+  const [showRejoinDialog, setShowRejoinDialog] = useState(false);
+  const [kickedRoomId, setKickedRoomId] = useState<string | null>(null);
 
   const handleLoginResponse = (data: LoginResponse) => {
     console.log("Login response:", data);
@@ -48,6 +47,9 @@ function App() {
 
   useEffect(() => {
     const handleConnect = () => console.log("Connected");
+    const handleUserInfo = (data: { balance: number }) => {
+      setBalance(data.balance);
+    };
     const handleGameIds = (data: RoomsResponse) => {
       if (data && "id" in data) setGameIds(data.id);
     };
@@ -59,7 +61,7 @@ function App() {
       console.log("Your turn!", data);
       setDeadline(data.end_timestamp);
     };
-    const handleError = (err: string | { msg: string; }) => {
+    const handleError = (err: string | { msg: string }) => {
       const msg = typeof err === "string" ? err : err.msg;
       alert(msg);
     };
@@ -86,6 +88,7 @@ function App() {
     socket.on("your_turn", handleYourTurn);
     socket.on("error", handleError);
     socket.on("kick", handleKick);
+    socket.on("user_info", handleUserInfo);
 
     // Attempt auto-login if token exists
     const savedToken = localStorage.getItem("player_token");
@@ -103,6 +106,7 @@ function App() {
       socket.off("your_turn", handleYourTurn);
       socket.off("error", handleError);
       socket.off("kick", handleKick);
+      socket.off("user_info", handleUserInfo);
     };
   }, []);
 
@@ -111,13 +115,20 @@ function App() {
     if (!gameState || !nick) return;
 
     if (gameState.game_phase === GamePhase.PLAYING) {
-      const currentPlayer = gameState.players[ gameState.turn.player_idx ];
+      const currentPlayer = gameState.players[gameState.turn.player_idx];
       // If it's playing phase and NOT my turn, verify I don't have a lingering timer
       if (currentPlayer && currentPlayer.nick !== nick) {
         setDeadline((prev) => (prev !== null ? null : prev));
       }
     }
-  }, [ gameState, nick ]);
+  }, [gameState, nick]);
+
+  // Pobierz balance po wejściu do lobby
+  useEffect(() => {
+    if (view === "lobby" && nick) {
+      socket.emit("get_balance", {});
+    }
+  }, [view, nick]);
 
   // --- Callbacks for Child Components ---
 
@@ -195,6 +206,7 @@ function App() {
         <LobbyView
           nick={nick}
           gameIds={gameIds}
+          balance={balance}
           onCreateGame={handleCreateGame}
           onRefreshList={handleRefreshList}
           onJoinGame={handleJoinGame}
