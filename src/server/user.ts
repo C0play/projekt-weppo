@@ -20,12 +20,12 @@ export class User {
 
     public send_kick_message(data: KickMessage) {
         this.send("kick", data);
-        logger.debug(`Sent kick message to ${this.nick}`);
+        logger.debug(`Sent kick message`, { nick: this.nick, roomId: this.room_id || 'NONE' });
     }
 
     public send_action_request(data: ActionRequest) {
         this.send("your_turn", data);
-        logger.debug(`Sent bet request to ${this.nick}`);
+        logger.debug(`Sent bet request`, { nick: this.nick, roomId: this.room_id || 'NONE' });
     }
 
     public send(event: string, data: any): void {
