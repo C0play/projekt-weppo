@@ -24,6 +24,11 @@ export default function GameView({ socket, gameState, nick, deadline, onExit }: 
   const [dealerRevealedCount, setDealerRevealedCount] = useState(1); // Cards that are face-up
   const [showResults, setShowResults] = useState(false); // Show results only after all dealer cards revealed
 
+  // Oblicz punkty tylko dla odkrytych kart dealera
+  const revealedDealerPoints = gameState.dealer.cards
+    .slice(0, dealerRevealedCount)
+    .reduce((sum, card) => sum + card.point, 0);
+
   // Animate dealer card reveal when entering RESULTS phase
   useEffect(() => {
     if (gameState.game_phase === GamePhase.RESULTS) {
@@ -108,7 +113,7 @@ export default function GameView({ socket, gameState, nick, deadline, onExit }: 
         </div>
 
         <div className="dealer-section">
-          <h2>Dealer (Points: {gameState.dealer.points})</h2>
+          <h2>Dealer (Points: {showResults ? gameState.dealer.points : revealedDealerPoints})</h2>
           <div className="cards">
             {/* Render cards based on visibility and reveal status */}
             {gameState.dealer.cards.slice(0, dealerTotalVisible).map((card, index) => {
