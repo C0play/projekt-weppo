@@ -17,12 +17,3 @@
   object-fit: cover;
   border-radius: 0px;
 }
-
-.card.back {
-  background-color: #2e3b4e;
-  color: white;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 2rem;
-}

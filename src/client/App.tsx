@@ -21,20 +21,17 @@ const socket: Socket = io("http://" + Config.CLIENT_IP + ":" + Config.CLIENT_POR
 function App() {
   const [view, setView] = useState<"login" | "lobby" | "game">("login");
   const [nick, setNick] = useState("");
-  const [_, setToken] = useState<string | null>(null);
   const [gameIds, setGameIds] = useState<string[]>([]);
   const [gameState, setGameState] = useState<SharedGameState | null>(null);
   const [deadline, setDeadline] = useState<number | null>(null);
   const [showRejoinDialog, setShowRejoinDialog] = useState(false);
   const [kickedRoomId, setKickedRoomId] = useState<string | null>(null);
-  const [currentRoomId, setCurrentRoomId] = useState<string | null>(null);
 
   const handleLoginResponse = (data: LoginResponse) => {
     console.log("Login response:", data);
     if (data.success && data.nick) {
       setNick(data.nick);
       if (data.token) {
-        setToken(data.token);
         localStorage.setItem("player_token", data.token);
         localStorage.setItem("player_nick", data.nick);
       }
@@ -62,7 +59,7 @@ function App() {
       console.log("Your turn!", data);
       setDeadline(data.end_timestamp);
     };
-    const handleError = (err: string | { msg: string; }) => {
+    const handleError = (err: string | { msg: string }) => {
       const msg = typeof err === "string" ? err : err.msg;
       alert(msg);
     };
@@ -70,7 +67,6 @@ function App() {
       console.log("Kicked from room:", data);
       setGameState(null);
       setDeadline(null);
-      setCurrentRoomId(null);
 
       if (data.reason === "removed") {
         setKickedRoomId(data.room_id);
@@ -145,14 +141,12 @@ function App() {
   };
 
   const handleJoinGame = (gameId: string) => {
-    setCurrentRoomId(gameId);
     const req: RoomRequest = { id: gameId };
     socket.emit("join_game", req);
   };
 
   const handleRejoinGame = () => {
     if (kickedRoomId) {
-      setCurrentRoomId(kickedRoomId);
       const req: RoomRequest = { id: kickedRoomId };
       socket.emit("join_game", req);
       setShowRejoinDialog(false);
@@ -171,7 +165,6 @@ function App() {
     setView("lobby");
     setGameState(null);
     setDeadline(null);
-    setCurrentRoomId(null);
   };
 
   // --- Render ---
