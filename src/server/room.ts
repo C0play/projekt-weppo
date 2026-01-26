@@ -17,7 +17,8 @@ export class Room {
 
     private readonly TURN_TIME_LIMIT: number = 10e3;    // miliseconds
     private readonly BET_TIME_LIMIT: number = 20e3;     // miliseconds
-    private readonly RESULT_TIME_LIMIT: number = 1.5e3; // miliseconds
+    private readonly DEALER_CARD_DELAY: number = 0.5e3; // miliseconds per card reveal
+    private readonly RESULT_DISPLAY_TIME: number = 5e3; // miliseconds to display final results
 
     private users: Map<string, User> = new Map(); // nick -> user
     private timeout: NodeJS.Timeout | null = null;
@@ -328,10 +329,15 @@ export class Room {
     // =================================== RESULTS ===================================
 
     private request_results() {
-        this.logger.info(`Phase: RESULTS. Displaying results for ${this.RESULT_TIME_LIMIT}ms`);
+        // Calculate time: 0.5s per dealer card revealed (minus the initial card) + 5s for results
+        const dealerCards = this.game.dealer.cards.length;
+        const revealTime = (dealerCards - 1) * this.DEALER_CARD_DELAY;
+        const totalTime = revealTime + this.RESULT_DISPLAY_TIME;
+        
+        this.logger.info(`Phase: RESULTS. Dealer has ${dealerCards} cards. Displaying results for ${totalTime}ms (${revealTime}ms reveal + ${this.RESULT_DISPLAY_TIME}ms display)`);
 
         this.set_timeout(
-            this.RESULT_TIME_LIMIT,
+            totalTime,
             () => {
                 this.clear_timeout();
                 this.game.change_game_phase();
