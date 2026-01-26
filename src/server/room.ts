@@ -186,6 +186,12 @@ export class Room {
             return;
         }
 
+        if (isNaN(bet_amount) || bet_amount <= 0) {
+            this.logger.warn(`Player tried to bet invalid amount: ${bet_amount}`, { nick: user.nick });
+            user.send("error", "Bet amount must be a positive number");
+            return;
+        }
+
         if (this.game.get_player_bet(user.nick) !== 0) {
             this.logger.warn(`Player tried betting multile times (already bet ${this.game.get_player_bet(user.nick)})`, { nick: user.nick });
             user.send("error", `Trying to bet multiple times.`);
