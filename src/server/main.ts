@@ -11,7 +11,7 @@ import {
   UserInfo,
 } from "../shared/types";
 import { logger } from "../shared/logger";
-import { Config } from "../shared/config";
+import { SERVER_IP, SERVER_PORT } from "../shared/config";
 
 
 // -- Wrappers for sending packets --
@@ -46,14 +46,14 @@ class GameServer {
     this.io = new Server(this.server, {
       cors: {
         origin: "*",
-        methods: ["GET", "POST"]
+        methods: [ "GET", "POST" ]
       }
     });
     this.setup_routes();
   }
 
   public start() {
-    this.server.listen(Config.SERVER_PORT, Config.SERVER_IP, () => {
+    this.server.listen(SERVER_PORT, SERVER_IP, () => {
       logger.info(`Server running at ${JSON.stringify(this.server.address())}`);
     });
   }
