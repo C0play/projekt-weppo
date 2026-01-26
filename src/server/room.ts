@@ -59,7 +59,7 @@ export class Room {
         else {
             user.room_id = this.id;
             this.users.set(user.nick, user);
-            if (!this.game.connect_player(user.nick)) {
+            if (!this.game.connect_player(user.nick, user.balance)) {
                 this.logger.warn(`Failed to connect player to game engine (full?)`, { nick: user.nick });
                 user.send("error", "Room is full or game error.");
                 this.users.delete(user.nick);
@@ -231,9 +231,9 @@ export class Room {
         if (current_user) {
 
             const validMoves = this.game.turn.validMoves;
-            let validNames = validMoves.map((move) => Action.toLowerCase(move) + " ");
+            let validNames = validMoves.map((move) => Action.toLowerCase(move));
 
-            this.logger.info(`Phase: PLAYING. Waiting for [${validNames}] from player (current_player_idx: ${this.game.turn.player_idx})`, { nick: current_user.nick });
+            this.logger.info(`Phase: PLAYING. Waiting for [${validNames}]`, { nick: current_user.nick });
 
             this.set_timeout(
                 this.TURN_TIME_LIMIT,
@@ -328,7 +328,7 @@ export class Room {
     // =================================== RESULTS ===================================
 
     private request_results() {
-        this.logger.info(`Phase: RESULTS. Displaying results for 5000ms.`);
+        this.logger.info(`Phase: RESULTS. Displaying results for ${this.RESULT_TIME_LIMIT}ms`);
 
         this.set_timeout(
             this.RESULT_TIME_LIMIT,
@@ -367,6 +367,11 @@ export class Room {
         this.logger.info(`Player requested to leave room`, { nick: user.nick });
 
         this.mark_as_inactive(user, "left");
+
+        if (this.game.has_player(user.nick)) {
+            user.balance = this.game.get_player_balance(user.nick);
+        }
+
         this.users.delete(user.nick);
         user.room_id = null;
         this.remove_inactive_users();
@@ -379,16 +384,19 @@ export class Room {
             return;
         }
 
-        const nicks: string[] = this.game.remove_inactive_players();
-        if (nicks.length > 0) {
+        const inactive_players = this.game.remove_inactive_players();
+        if (inactive_players.length > 0) {
+            const nicks = inactive_players.map(p => p.nick);
             this.logger.debug(`Removing inactive players: [${nicks}]`);
         } else {
             this.logger.debug(`No players to remove`);
         }
 
-        for (let nick of nicks) {
+        for (let { nick, balance } of inactive_players) {
             const user = this.users.get(nick);
             if (user) {
+                user.balance = balance;
+
                 if (user.room_id === this.id) {
                     user.send_kick_message({
                         reason: "removed",
@@ -434,7 +442,7 @@ export class Room {
     private clear_timeout() {
         this.timeout_end = null;
         if (this.timeout !== null) {
-            this.logger.info(`Clearing timer ${this.timeout}`);
+            this.logger.debug(`Clearing timer ${this.timeout}`);
             clearTimeout(this.timeout);
         } else {
             this.logger.error(`Tried to clear timer, while it's null`);
