@@ -7,7 +7,8 @@ import { Room } from "./room";
 import { User } from "./user";
 import {
   LoginRequest, LoginResponse,
-  RoomRequest, RoomsResponse
+  RoomRequest, RoomsResponse,
+  UserInfo,
 } from "../shared/types";
 import { logger } from "../shared/logger";
 import { Config } from "../shared/config";
@@ -68,6 +69,7 @@ class GameServer {
       socket.on("create_game", () => this.handle_create_game(socket));
       socket.on("join_game", (data: RoomRequest) => this.handle_join_game(socket, data));
       socket.on("leave_game", () => this.handle_leave_game(socket));
+      socket.on("get_balance", (data: UserInfo) => this.handle_user_info(socket, data));
     });
   }
 
@@ -280,6 +282,10 @@ class GameServer {
     }
 
     room.leave(user);
+  }
+
+  private handle_user_info(socket: Socket, message: UserInfo) {
+    socket.emit("user_info", message);
   }
 }
 

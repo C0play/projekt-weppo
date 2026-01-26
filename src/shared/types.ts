@@ -50,3 +50,7 @@ export interface KickMessage {
     reason: string,
     room_id: string;
 }
+
+export interface UserInfo {
+    balance: number,
+}
